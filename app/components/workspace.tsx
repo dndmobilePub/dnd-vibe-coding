@@ -130,6 +130,15 @@ function MiniChart({
   large?: boolean;
 }) {
   const gradientId = useId();
+  const data = [48, 66, 58, 81, 70, 96].map((value, i) => ({
+    label: variant === 2 ? `${String.fromCharCode(65 + i)} 공정` : `${4 + i}월`,
+    value,
+    comparison: value - (i % 3) * 10 - 8,
+  }));
+  const linePoints = data.map((point, i) =>
+    `${(i / (data.length - 1)) * 400} ${120 - point.value}`,
+  );
+  const linePath = `M ${linePoints.join(" L ")}`;
   return (
     <div
       className={`mini-chart chart-${variant} ${large ? "large-chart" : ""}`}
@@ -152,11 +161,11 @@ function MiniChart({
             </linearGradient>
           </defs>
           <path
-            d="M0 100 C25 105 35 70 65 77 S105 105 135 65 S180 80 210 43 S245 77 270 46 S305 60 335 26 S370 35 400 10 L400 120 L0 120Z"
+            d={`${linePath} L400 120 L0 120Z`}
             fill={`url(#${gradientId})`}
           />
           <path
-            d="M0 100 C25 105 35 70 65 77 S105 105 135 65 S180 80 210 43 S245 77 270 46 S305 60 335 26 S370 35 400 10"
+            d={linePath}
             fill="none"
             stroke="#2584ce"
             strokeWidth="3"
@@ -164,20 +173,17 @@ function MiniChart({
         </svg>
       ) : (
         <div className="bars">
-          {[48, 66, 58, 81, 70, 96, 78, 88, 105, 90, 98, 115].map((n, i) => (
-            <div className="bar-pair" key={i}>
-              <span style={{ height: `${n / 1.3}%` }} />
-              <span style={{ height: `${(n - (i % 3) * 10 - 8) / 1.3}%` }} />
+          {data.map((point) => (
+            <div className="bar-pair" key={point.label}>
+              <span style={{ height: `${point.value / 1.3}%` }} />
+              <span style={{ height: `${point.comparison / 1.3}%` }} />
             </div>
           ))}
         </div>
       )}
       <div className="axis">
-        {(variant === 2
-          ? ["A 공정", "B 공정", "C 공정", "D 공정", "E 공정", "F 공정"]
-          : ["4월", "5월", "6월", "7월", "8월", "9월"]
-        ).map((label) => (
-          <span key={label}>{label}</span>
+        {data.map((point) => (
+          <span key={point.label}>{point.label}</span>
         ))}
       </div>
     </div>

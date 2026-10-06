@@ -807,6 +807,16 @@ button:hover:not(:disabled) {
   font-size: 12px;
   color: var(--muted);
 }
+.mini-chart:not(.chart-1) .axis {
+  left: 8px;
+  right: 8px;
+  gap: 7px;
+}
+.mini-chart:not(.chart-1) .axis span {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
 .chart-1 svg {
   position: relative;
   width: 100%;
@@ -2143,6 +2153,9 @@ dd {
     padding-right: 15px;
   }
   .bars {
+    gap: 4px;
+  }
+  .mini-chart:not(.chart-1) .axis {
     gap: 4px;
   }
   .bar-pair {

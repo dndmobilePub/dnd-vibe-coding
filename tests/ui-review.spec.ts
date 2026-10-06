@@ -11,7 +11,7 @@ test("search recovery and required analysis name focus", async ({ page }) => {
   await page.getByRole("button", { name: "새 분석 만들기" }).click();
   await page.getByRole("button", { name: "다음: 데이터 준비", exact: true }).click();
   await expect(page.getByRole("textbox", { name: /분석 이름/ })).toBeFocused();
-  await expect(page.getByRole("dialog").getByRole("alert")).toHaveText("분석 이름을 입력해주세요.");
+  await expect(page.locator(".analysis-editor").getByRole("alert")).toHaveText("분석 이름을 입력해주세요.");
 });
 
 test("workspace fits phone, tablet, desktop and landscape", async ({ page }) => {

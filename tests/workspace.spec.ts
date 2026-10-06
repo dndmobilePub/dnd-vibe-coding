@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+﻿import { expect, test } from "@playwright/test";
 
 test("home, search, favorites and local persistence", async ({ page }) => {
   await page.goto("/");
@@ -37,7 +37,7 @@ test("six-stage data preparation, joins, cleanup, validation and publication", a
   await page
     .getByRole("button", { name: "다음: 데이터 준비", exact: true })
     .click();
-  await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
+  await expect(page.locator(".analysis-editor").getByRole("alert")).toHaveText(
     "분석 이름을 입력해주세요.",
   );
   await page.getByRole("textbox", { name: /분석 이름/ }).fill("E2E 생산 분석");
@@ -69,7 +69,7 @@ test("six-stage data preparation, joins, cleanup, validation and publication", a
   await page
     .getByRole("button", { name: "다음: 차트 · 시각화", exact: true })
     .click();
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+  await expect(page.locator(".analysis-editor").getByRole("alert")).toContainText(
     "6단계",
   );
   await page
@@ -235,7 +235,7 @@ test("CSV parsing, query filters, numeric sorting and actual result save", async
   expect(content).toContain('"금"');
   expect(content).toContain("320");
   expect(content).not.toContain("120");
-  await page.getByRole("button", { name: "창 닫기" }).click();
+  await page.getByRole("button", { name: "분석 목록으로" }).click();
   await page.getByRole("button", { name: "새 분석 만들기" }).click();
   await page.getByRole("textbox", { name: /분석 이름/ }).fill("재사용 분석");
   await page
@@ -288,7 +288,8 @@ test("mobile layout, menu, keyboard dialog and no horizontal overflow", async ({
     page.getByRole("heading", { name: "데이터 라이브러리", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "새 분석 만들기" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page).toHaveURL(/\/analyses\/new/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page
     .getByRole("textbox", { name: /분석 이름/ })
     .fill("모바일 준비 확인");
@@ -318,9 +319,9 @@ test("mobile layout, menu, keyboard dialog and no horizontal overflow", async ({
   await expect(page.locator(".validation-success")).toContainText("검증 완료");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "새 분석 만들기" }),
-  ).toBeFocused();
+  await expect(page.locator(".analysis-editor")).toBeVisible();
+  await page.getByRole("button", { name: "분석 목록으로" }).click();
+  await expect(page).toHaveURL(/\/analyses$/);
   expect(errors).toEqual([]);
 });
 
@@ -358,3 +359,4 @@ test("independent URLs, reload, active navigation and browser history", async ({
   await page.goForward();
   await expect(page).toHaveURL(/\/data-library$/);
 });
+

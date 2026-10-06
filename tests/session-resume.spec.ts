@@ -7,13 +7,16 @@ test("draft restores setup and updates the original session", async ({ page }) =
   await page.getByRole("button", { name: "새 분석 만들기" }).click();
   await page.getByRole("textbox", { name: /분석 이름/ }).fill("복원 검증");
   await page.getByRole("textbox", { name: "분석 목적" }).fill("원래 목적");
-  await page.getByRole("dialog").getByRole("button", { name: "임시저장", exact: true }).click();
+  await page.locator(".analysis-editor").getByRole("button", { name: "임시저장", exact: true }).click();
   await page.reload();
   await page.getByRole("button").filter({ has: page.getByRole("heading", { name: "복원 검증" }) }).click();
   await page.getByRole("button", { name: "이어서 분석하기" }).click();
+  await expect(page).toHaveURL(/\/analyses\/new\?session=/);
+  await page.reload();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "분석 목적" })).toHaveValue("원래 목적");
   await page.getByRole("textbox", { name: /분석 이름/ }).fill("복원 수정");
-  await page.getByRole("dialog").getByRole("button", { name: "임시저장", exact: true }).click();
+  await page.locator(".analysis-editor").getByRole("button", { name: "임시저장", exact: true }).click();
   await expect(page.getByRole("heading", { name: "복원 수정" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "복원 검증" })).toHaveCount(0);
 });
@@ -32,6 +35,7 @@ test("chart uses prepared rows and restores axis and aggregation", async ({ page
   await expect(page.getByLabel("X축", { exact: true })).toHaveValue("product_code");
   await expect(page.getByLabel("Y축", { exact: true })).toHaveValue("quantity");
   await page.getByLabel("집계 방식").selectOption("avg");
-  await expect(page.getByRole("dialog").locator(".result-chart")).toContainText("평균");
+  await expect(page.locator(".analysis-editor .result-chart")).toContainText("평균");
 });
+
 

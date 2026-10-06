@@ -13,6 +13,21 @@
   --font:
     "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+
+.analysis-page { margin-left: 244px; padding: 28px 40px 40px; }
+.analysis-editor { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
+.analysis-editor .workflow-body { overflow: visible; }
+.analysis-editor .workflow-footer { background: var(--surface); border-radius: 0 0 var(--radius) var(--radius); }
+.editor-shell .main-content[hidden] { display: none; }
+@media (max-width: 1200px) { .analysis-page { margin-left: 214px; padding: 24px 28px; } }
+@media (max-width: 1000px) { .analysis-page { margin-left: 190px; padding: 20px 23px; } }
+@media (max-width: 760px) { .analysis-page { margin-left: 0; padding: 20px 16px; } }
+@media (max-width: 600px) {
+  .analysis-page { padding: 12px 8px; }
+  .analysis-editor .workflow-footer { position: static; }
+  .analysis-editor .workflow-steps { overflow-x: auto; justify-content: flex-start; }
+  .analysis-editor .workflow-steps li { flex-shrink: 0; }
+}
 * {
   box-sizing: border-box;
 }

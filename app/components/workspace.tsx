@@ -209,14 +209,16 @@ const viewPaths: Record<View, string> = {
   settings: "/settings",
 };
 
-export default function Workspace({ view }: { view: View }) {
+export default function Workspace({ view, editor = false, sessionId, copy = false, initialTitle = "" }: {
+  view: View; editor?: boolean; sessionId?: number; copy?: boolean; initialTitle?: string;
+}) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [analyses, setAnalyses] = useState(initialAnalyses);
   const [query, setQuery] = useState("");
   const [prompt, setPrompt] = useState("");
   const [modal, setModal] = useState<"workflow" | "detail" | "help" | null>(
-    null,
+    editor ? "workflow" : null,
   );
   const [active, setActive] = useState<Analysis>(initialAnalyses[0]);
   const [step, setStep] = useState(0);
@@ -289,7 +291,7 @@ export default function Workspace({ view }: { view: View }) {
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
-    if (!modal) return;
+    if (!modal || editor) return;
     restoreFocus.current = document.activeElement as HTMLElement;
     const old = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -322,7 +324,7 @@ export default function Workspace({ view }: { view: View }) {
       document.removeEventListener("keydown", onKey);
       restoreFocus.current?.focus();
     };
-  }, [modal]);
+  }, [modal, editor]);
   const persist = (next: Analysis[]) => {
     setAnalyses(next);
     try {
@@ -343,6 +345,7 @@ export default function Workspace({ view }: { view: View }) {
       analyses.map((a) => (a.id === id ? { ...a, starred: !a.starred } : a)),
     );
   const begin = (text = "") => {
+    if (!editor) { router.push(`/analyses/new${text ? `?title=${encodeURIComponent(text)}` : ""}`); return; }
     setEditingId(null);
     setKind("비교 분석");
     setDomain("생산 관리");
@@ -358,6 +361,7 @@ export default function Workspace({ view }: { view: View }) {
     setModal("workflow");
   };
   const resume = (a: Analysis, copy = false) => {
+    if (!editor) { router.push(`/analyses/new?session=${a.id}${copy ? "&copy=1" : ""}`); return; }
     setEditingId(copy ? null : a.id);
     setTitle(copy ? `${a.title} 복사본` : a.title);
     setDescription(a.description || "");
@@ -370,6 +374,16 @@ export default function Workspace({ view }: { view: View }) {
     setAggregation(a.aggregation || "sum");
     setError(""); setModal("workflow");
   };
+  useEffect(() => {
+    if (!editor || !ready) return;
+    if (sessionId !== undefined) {
+      const existing = analyses.find(a => a.id === sessionId);
+      if (existing) resume(existing, copy);
+      else { setError("저장된 분석을 찾을 수 없습니다. 새 분석으로 시작해주세요."); }
+    } else begin(initialTitle);
+    // Initialize once after browser storage has been restored.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, ready, sessionId, copy, initialTitle]);
   const saveAnalysis = (publish: boolean) => {
     if (publish && !preparation.saved) { setError("데이터셋을 저장한 뒤 게시해주세요."); setStep(1); return; }
     if (!title.trim()) {
@@ -460,7 +474,7 @@ export default function Workspace({ view }: { view: View }) {
   }[view];
 
   return (
-    <div className="app-shell" inert={!ready} aria-busy={!ready}>
+    <div className={`app-shell ${editor ? "editor-shell" : ""}`} inert={!ready} aria-busy={!ready}>
       <a className="skip-link" href="#main">
         본문으로 건너뛰기
       </a>
@@ -567,7 +581,7 @@ export default function Workspace({ view }: { view: View }) {
             </button>
             <span>워크스페이스</span>
             <ChevronRight size={14} />
-            <strong>{view === "home" ? "홈" : pageTitle}</strong>
+            <strong>{editor ? (sessionId && !copy ? "분석 편집" : "새 분석 만들기") : view === "home" ? "홈" : pageTitle}</strong>
           </div>
           <div className="top-actions">
             <span className="demo-label">
@@ -653,7 +667,7 @@ export default function Workspace({ view }: { view: View }) {
           )}
         </header>
 
-        <main id="main" className="main-content">
+        <main id={editor ? "workspace-content" : "main"} className="main-content" hidden={editor}>
           {view === "home" ? (
             <>
               <section className="page-heading">
@@ -1262,7 +1276,9 @@ export default function Workspace({ view }: { view: View }) {
 
       {modal && (
         <div
-          className="modal-overlay"
+          className={editor ? "analysis-page" : "modal-overlay"}
+          role={editor ? "main" : undefined}
+          id={editor ? "main" : undefined}
           onClick={(e) => {
             if (e.target === e.currentTarget) setModal(null);
           }}
@@ -1270,9 +1286,9 @@ export default function Workspace({ view }: { view: View }) {
           <div
             ref={modalRef}
             tabIndex={-1}
-            className={`modal ${modal === "workflow" ? "workflow-modal" : ""}`}
-            role="dialog"
-            aria-modal="true"
+            className={editor ? "analysis-editor" : `modal ${modal === "workflow" ? "workflow-modal" : ""}`}
+            role={editor ? "region" : "dialog"}
+            aria-modal={editor ? undefined : true}
             aria-labelledby="modal-title"
           >
             <header className="modal-header">
@@ -1293,11 +1309,11 @@ export default function Workspace({ view }: { view: View }) {
                 </h2>
               </div>
               <button
-                className="icon-button"
-                aria-label="창 닫기"
-                onClick={() => setModal(null)}
+                className={editor ? "button secondary" : "icon-button"}
+                aria-label={editor ? "분석 목록으로" : "창 닫기"}
+                onClick={() => editor ? router.push("/analyses") : setModal(null)}
               >
-                <X size={23} />
+                {editor ? <span>목록으로</span> : <X size={23} />}
               </button>
             </header>
             {modal === "help" ? (

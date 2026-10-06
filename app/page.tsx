@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { Checkbox } from "./components/checkbox";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -992,15 +993,15 @@ export default function Page() {
                         연결되어 있지 않습니다.
                       </small>
                     </span>
-                    <input
-                      type="checkbox"
+                    <Checkbox
+                      aria-label="분석 업데이트 알림"
                       checked={emailUpdates}
-                      onChange={(e) => {
-                        setEmailUpdates(e.target.checked);
+                      onCheckedChange={(checked) => {
+                        setEmailUpdates(checked === true);
                         try {
                           localStorage.setItem(
                             "mnm-email",
-                            String(e.target.checked),
+                            String(checked === true),
                           );
                           setToast("알림 설정을 저장했습니다.");
                         } catch {
@@ -1443,10 +1444,10 @@ export default function Page() {
                                   key={d.id}
                                   className={`source-option ${selected.includes(d.id) ? "checked" : ""}`}
                                 >
-                                  <input
-                                    type="checkbox"
+                                  <Checkbox
+                                    aria-label={`${d.title} 선택`}
                                     checked={selected.includes(d.id)}
-                                    onChange={() => {
+                                    onCheckedChange={() => {
                                       setSelected(
                                         selected.includes(d.id)
                                           ? selected.filter((id) => id !== d.id)

@@ -41,7 +41,29 @@ test("analysis guards, data validation, chart choice and publication", async ({
   await page.getByRole("textbox", { name: /분석 이름/ }).fill("E2E 생산 분석");
   await page.getByRole("button", { name: "다음: 데이터 준비" }).click();
   await page.getByRole("button", { name: "추천 적용", exact: true }).click();
-  await expect(page.locator(".source-option input:checked")).toHaveCount(2);
+  await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(2);
+  const stock = page.getByRole("checkbox", { name: "재고_현황 선택" });
+  await stock.focus();
+  await page.keyboard.press("Space");
+  await expect(stock).toBeChecked();
+  await page.keyboard.press("Space");
+  await expect(stock).not.toBeChecked();
+  await page
+    .locator(".source-option")
+    .filter({ hasText: "APS_생산계획" })
+    .getByText("APS_생산계획", { exact: true })
+    .click();
+  await expect(
+    page.getByRole("checkbox", { name: "APS_생산계획 선택" }),
+  ).not.toBeChecked();
+  await page
+    .locator(".source-option")
+    .filter({ hasText: "APS_생산계획" })
+    .getByText("APS_생산계획", { exact: true })
+    .click();
+  await expect(
+    page.getByRole("checkbox", { name: "APS_생산계획 선택" }),
+  ).toBeChecked();
   await page.getByRole("button", { name: "다음: 차트 · 시각화" }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
     "데이터 검증",

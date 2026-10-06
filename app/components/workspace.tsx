@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 import { Select } from "./select";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { ResultChart } from "./result-chart";
+import { ChartGallery, chartTypes } from "./chart-gallery";
 import { Checkbox } from "./checkbox";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -60,6 +61,7 @@ type Analysis = {
   status: string;
   starred: boolean;
   chart: number;
+  chartTypes?: string[];
   description?: string;
   preparation?: PreparationState;
   step?: number;
@@ -230,6 +232,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
   );
   const [savedDatasets, setSavedDatasets] = useState<SavedDataset[]>([]);
   const [chartType, setChartType] = useState(0);
+  const [selectedChartTypes, setSelectedChartTypes] = useState(chartTypes.map(t=>t.id));
   const [editingId, setEditingId] = useState<number | null>(null);
   const [kind, setKind] = useState("비교 분석");
   const [domain, setDomain] = useState("생산 관리");
@@ -359,6 +362,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
     setError("");
     setPreparation(createPreparationState());
     setChartType(0);
+    setSelectedChartTypes(chartTypes.map(t=>t.id));
     setModal("workflow");
   };
   const resume = (a: Analysis, copy = false) => {
@@ -369,6 +373,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
     setPreparation(a.preparation || createPreparationState());
     setStep(a.step ?? 0);
     setChartType(a.chart);
+    setSelectedChartTypes(a.chartTypes?.filter(id=>chartTypes.some(t=>t.id===id)) || [a.chart === 1 ? "line" : "bar"]);
     setKind(a.kind || "비교 분석");
     setDomain(a.category);
     setX(a.x || ""); setY(a.y || "");
@@ -402,6 +407,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
       status: publish ? "게시됨" : "임시저장",
       starred: analyses.find(a => a.id === editingId)?.starred ?? false,
       chart: chartType,
+      chartTypes: selectedChartTypes,
       description, preparation, step, kind, x, y, aggregation,
       updatedAt: Date.now(),
       history: [...(analyses.find(a => a.id === editingId)?.history || []),
@@ -418,6 +424,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
   };
   const nextStep = () => {
     setError("");
+    if (step === 2 && !selectedChartTypes.length) { setError("차트 유형을 하나 이상 선택해주세요."); return; }
     if (step === 0 && !title.trim()) {
       setError("분석 이름을 입력해주세요.");
       titleRef.current?.focus();
@@ -1516,28 +1523,8 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                         <label className="select-field">X축 <Select aria-label="X축" value={x} onChange={e=>setX(e.target.value)}><option value="">자동 선택</option>{evaluatePreparation(preparation).columns.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</Select></label>
                         <label className="select-field">Y축 <Select aria-label="Y축" value={y} onChange={e=>setY(e.target.value)}><option value="">자동 선택</option>{evaluatePreparation(preparation).columns.filter(c=>c.type==="number").map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</Select></label>
                         <label className="select-field">집계 <Select aria-label="집계 방식" value={aggregation} onChange={e=>setAggregation(e.target.value)}><option value="sum">합계</option><option value="avg">평균</option><option value="count">건수</option></Select></label>
-                      </div><div className="chart-choices">
-                        {[
-                          "생산 실적 비교",
-                          "월별 추이",
-                          "공정별 품질 비교",
-                        ].map((c, i) => (
-                          <button
-                            key={c}
-                            className={chartType === i ? "selected" : ""}
-                            aria-pressed={chartType === i}
-                            onClick={() => setChartType(i)}
-                          >
-                            {i === 1 ? (
-                              <ChartNoAxesCombined size={23} />
-                            ) : (
-                              <ChartColumn size={23} />
-                            )}
-                            <strong>{c}</strong>
-                            {chartType === i && <Check size={16} />}
-                          </button>
-                        ))}
                       </div>
+                      <ChartGallery kind={kind} selected={selectedChartTypes} onChange={next=>{ setSelectedChartTypes(next); setChartType(next.includes("line") ? 1 : 0); setError(""); }} />
                       <div className="chart-preview">
                         <div className="chart-title">
                           <h3>{title}</h3>
@@ -1618,13 +1605,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                         <div>
                           <span>차트</span>
                           <strong>
-                            {
-                              [
-                                "생산 실적 비교",
-                                "월별 추이",
-                                "공정별 품질 비교",
-                              ][chartType]
-                            }
+                            {chartTypes.filter(t=>selectedChartTypes.includes(t.id)).map(t=>t.name).join(" / ")}
                           </strong>
                         </div>
                         <div>

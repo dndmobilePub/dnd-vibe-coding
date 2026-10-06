@@ -3865,3 +3865,37 @@ tbody tr:hover { background: #f1f6fd; }
   .preparation-ai { position: sticky; top: 12px; right: auto; bottom: auto; width: 100%; height: 320px; order: -1; z-index: 10; }
   .preparation-ai .chat-input input { font-size: 16px; }
 }
+
+.chart-gallery { margin-bottom: 24px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; background: #f8fafc; }
+.chart-gallery-toolbar, .chart-gallery-toolbar > div, .chart-gallery-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.chart-gallery-toolbar { justify-content: space-between; margin-bottom: 16px; }
+.chart-gallery-toolbar h3 { font-size: 16px; color: #163b63; }
+.chart-gallery-toolbar > div > span { font-size: 13px; color: #43566c; }
+.chart-gallery-actions .button { padding: 8px 12px; font-size: 12px; }
+.chart-type-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.chart-type-option { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: #33465b; cursor: pointer; font-size: 13px; }
+.chart-type-option.selected { background: #eaf2fc; border-color: #1f4e79; color: #163b63; }
+.chart-type-option > svg, .chart-type-option .ui-checkbox { flex-shrink: 0; }
+.chart-type-option > span:not(.recommended-badge) { overflow-wrap: anywhere; }
+.recommended-badge { margin-left: auto; padding: 4px 8px; border-radius: 12px; background: #fff0dc; color: #8b4400; font-size: 11px; white-space: nowrap; }
+.chart-gallery-note { margin: 16px 0 12px; color: #43566c; font-size: 13px; }
+.sample-chart-grid { display: grid; gap: 12px; }
+.sample-chart-card { min-width: 0; padding: 12px; background: white; border: 1px solid #d9e3ef; border-radius: 8px; }
+.sample-chart-card > header { display: flex; align-items: center; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+.sample-chart-number { width: 24px; height: 24px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: #1f4e79; color: white; font-size: 12px; font-weight: 700; }
+.sample-chart-card h4 { flex: 1; min-width: 0; font-size: 13px; color: #163b63; }
+.sample-chart-kind { font-size: 11px; color: #43566c; padding: 4px 8px; background: #eff4fa; border-radius: 8px; white-space: nowrap; }
+.sample-chart svg { display: block; width: 100%; height: auto; min-height: 160px; margin-top: 8px; }
+.sample-chart svg text { fill: #43566c; font-size: 14px; }
+.sample-chart svg .donut-total { font-size: 24px; font-weight: 700; fill: #163b63; }
+.sample-legend { display: flex; flex-wrap: wrap; gap: 12px; min-height: 24px; margin-top: 8px; font-size: 12px; color: #43566c; }
+.sample-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.sample-legend i { width: 12px; height: 12px; border-radius: 2px; }
+.chart-gallery-empty { padding: 32px 16px; text-align: center; color: #43566c; }
+@media (max-width: 1200px) { .chart-type-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .sample-chart-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .chart-gallery { padding: 12px; }
+  .chart-type-option { flex-wrap: wrap; }
+  .chart-gallery-actions { gap: 8px; }
+}

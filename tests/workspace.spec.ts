@@ -129,7 +129,7 @@ test("six-stage data preparation, joins, cleanup, validation and publication", a
   await page
     .getByRole("button", { name: "다음: 차트 · 시각화", exact: true })
     .click();
-  await page.getByRole("button", { name: "월별 추이", exact: true }).click();
+  await page.getByRole("checkbox", { name: "물결 라인 선택", exact: true }).check();
   await page
     .getByRole("button", { name: "다음: 인사이트", exact: true })
     .click();
@@ -359,4 +359,5 @@ test("independent URLs, reload, active navigation and browser history", async ({
   await page.goForward();
   await expect(page).toHaveURL(/\/data-library$/);
 });
+
 

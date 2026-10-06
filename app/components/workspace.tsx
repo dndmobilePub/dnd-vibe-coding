@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { ResultChart } from "./result-chart";
 import { Checkbox } from "./checkbox";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -58,6 +59,15 @@ type Analysis = {
   status: string;
   starred: boolean;
   chart: number;
+  description?: string;
+  preparation?: PreparationState;
+  step?: number;
+  kind?: string;
+  x?: string;
+  y?: string;
+  aggregation?: string;
+  history?: string[];
+  updatedAt?: number;
 };
 const initialAnalyses: Analysis[] = [
   {
@@ -217,6 +227,13 @@ export default function Workspace({ view }: { view: View }) {
   );
   const [savedDatasets, setSavedDatasets] = useState<SavedDataset[]>([]);
   const [chartType, setChartType] = useState(0);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [kind, setKind] = useState("비교 분석");
+  const [domain, setDomain] = useState("생산 관리");
+  const [x, setX] = useState("");
+  const [y, setY] = useState("");
+  const [aggregation, setAggregation] = useState("sum");
+  const [sort, setSort] = useState("recent");
   const [notifications, setNotifications] = useState(false);
   const [unread, setUnread] = useState(true);
   const [toast, setToast] = useState("");
@@ -326,6 +343,10 @@ export default function Workspace({ view }: { view: View }) {
       analyses.map((a) => (a.id === id ? { ...a, starred: !a.starred } : a)),
     );
   const begin = (text = "") => {
+    setEditingId(null);
+    setKind("비교 분석");
+    setDomain("생산 관리");
+    setX(""); setY(""); setAggregation("sum");
     setTitle(text);
     setDescription(
       text ? "샘플 데이터를 활용하여 주요 추이와 개선 기회를 탐색합니다." : "",
@@ -336,24 +357,42 @@ export default function Workspace({ view }: { view: View }) {
     setChartType(0);
     setModal("workflow");
   };
+  const resume = (a: Analysis, copy = false) => {
+    setEditingId(copy ? null : a.id);
+    setTitle(copy ? `${a.title} 복사본` : a.title);
+    setDescription(a.description || "");
+    setPreparation(a.preparation || createPreparationState());
+    setStep(a.step ?? 0);
+    setChartType(a.chart);
+    setKind(a.kind || "비교 분석");
+    setDomain(a.category);
+    setX(a.x || ""); setY(a.y || "");
+    setAggregation(a.aggregation || "sum");
+    setError(""); setModal("workflow");
+  };
   const saveAnalysis = (publish: boolean) => {
+    if (publish && !preparation.saved) { setError("데이터셋을 저장한 뒤 게시해주세요."); setStep(1); return; }
     if (!title.trim()) {
       setError("분석 이름을 입력해주세요.");
       setStep(0);
       return;
     }
     const next: Analysis = {
-      id: Date.now(),
+      id: editingId ?? Date.now(),
       title: title.trim(),
-      category: "나의 분석",
+      category: domain,
       date: new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" })
         .format(new Date())
         .replaceAll("-", "."),
       status: publish ? "게시됨" : "임시저장",
-      starred: false,
+      starred: analyses.find(a => a.id === editingId)?.starred ?? false,
       chart: chartType,
+      description, preparation, step, kind, x, y, aggregation,
+      updatedAt: Date.now(),
+      history: [...(analyses.find(a => a.id === editingId)?.history || []),
+        `${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · ${publish ? "게시" : "저장"} · ${steps[step]}`],
     };
-    persist([next, ...analyses]);
+    persist([next, ...analyses.filter(a => a.id !== next.id)]);
     setModal(null);
     navigate("analyses");
     setToast(
@@ -403,7 +442,7 @@ export default function Workspace({ view }: { view: View }) {
       (view !== "reports" || a.status === "게시됨") &&
       (filter === "전체" || a.status === filter) &&
       a.title.toLowerCase().includes(query.trim().toLowerCase()),
-  );
+  ).sort((a,b) => sort === "name" ? a.title.localeCompare(b.title, "ko") : (b.updatedAt ?? b.id) - (a.updatedAt ?? a.id));
   const navs: { id: View; label: string; icon: typeof Home }[] = [
     { id: "home", label: "워크스페이스", icon: Home },
     { id: "analyses", label: "나의 분석", icon: ChartNoAxesCombined },
@@ -1154,6 +1193,7 @@ export default function Workspace({ view }: { view: View }) {
                       />
                     </label>
                   </div>
+                  <label>정렬 <select aria-label="분석 정렬" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">최근 저장순</option><option value="name">이름순</option></select></label>
                   <p className="search-summary" role="status">{filtered.length}개의 분석{query.trim() ? ` · “${query.trim()}” 검색 결과` : ""}</p>
                   <div className="analysis-grid">
                     {filtered.map((a) => (
@@ -1288,11 +1328,7 @@ export default function Workspace({ view }: { view: View }) {
                 <div className="notice">
                   <CircleHelp size={20} />
                   <span>
-                    AI 응답과 차트는 샘플입니다. CSV는 브라우저에서만 읽으며
-                    서버로 전송하지 않습니다. 저장 항목은 분석 이름·상태·차트
-                    형식입니다. 데이터 준비에서 저장한 결과는 별도로 이
-                    브라우저의 데이터 라이브러리에 보관됩니다. 분석 작업 단계는
-                    보관하지 않습니다.
+                    AI 응답은 예시이며, 준비 데이터는 실제 집계합니다. 분석 설정과 작업 단계를 이 브라우저에 저장하고 복원합니다.
                   </span>
                 </div>
                 <button className="button primary" onClick={() => begin()}>
@@ -1314,21 +1350,23 @@ export default function Workspace({ view }: { view: View }) {
                 <div className="chart-title">
                   <h3>{active.title}</h3>
                   <span className="subtle-label">
-                    샘플 시각화 · 실제 계산 결과 아님
+                    준비 데이터 집계 결과
                   </span>
                 </div>
-                <MiniChart variant={active.chart} large />
+                {active.preparation ? <ResultChart preparation={active.preparation} x={active.x} y={active.y} aggregation={active.aggregation} variant={active.chart} /> : <MiniChart variant={active.chart} large />}
                 <div className="notice">
                   <Sparkles size={20} />
                   <span>
                     <strong>인사이트 예시</strong>
                     <br />
-                    전반적인 생산 추이는 상승하고 있습니다. 실제 원인을
-                    판단하려면 원본 데이터와 공정 조건을 함께 확인하세요.
+                    데이터의 분포와 기간별 변화를 확인하세요. 실제 원인을 판단하려면 원본 데이터와 공정 조건을 함께 확인하세요.
                   </span>
                 </div>
-                <DataTable />
+                {active.preparation ? <DatasetTable columns={evaluatePreparation(active.preparation).columns} rows={evaluatePreparation(active.preparation).rows} pageSize={10} /> : <DataTable />}
+                <p>진행 단계: {steps[active.step ?? 0]} · {active.kind || "샘플 분석"}</p>
+                <ul>{active.history?.map((h,i)=><li key={i}>{h}</li>)}</ul>
                 <div className="detail-actions">
+                  <button className="button secondary" onClick={() => resume(active, true)}>복제</button>
                   <button
                     className="button secondary"
                     onClick={() => {
@@ -1342,15 +1380,15 @@ export default function Workspace({ view }: { view: View }) {
                     />
                     {active.starred ? "즐겨찾기 해제" : "즐겨찾기 추가"}
                   </button>
-                  <button className="button secondary" onClick={download}>
+                  <button className="button secondary" onClick={() => active.preparation ? downloadDataset({ name: active.title, ...evaluatePreparation(active.preparation) }) : download()}>
                     <Download size={16} />
                     샘플 CSV
                   </button>
                   <button
                     className="button primary"
-                    onClick={() => begin(active.title)}
+                    onClick={() => resume(active)}
                   >
-                    이 주제로 새 분석
+                    이어서 분석하기
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -1397,6 +1435,8 @@ export default function Workspace({ view }: { view: View }) {
                         />
                         <small>{title.length}/100</small>
                       </label>
+                      <label className="field">분석 유형<select value={kind} onChange={e=>setKind(e.target.value)}>{["원인 분석", "추이 모니터링", "비교 분석", "예측"].map(k=><option key={k}>{k}</option>)}</select></label>
+                      <label className="field">도메인<select value={domain} onChange={e=>setDomain(e.target.value)}>{["생산 관리", "품질 관리", "설비 보전", "구매 · 자재", "물류 · 재고"].map(k=><option key={k}>{k}</option>)}</select></label>
                       <label className="field">
                         분석 목적
                         <textarea
@@ -1451,11 +1491,15 @@ export default function Workspace({ view }: { view: View }) {
                         <div>
                           <h3>데이터를 가장 잘 설명하는 차트를 선택하세요</h3>
                           <p>
-                            미리보기는 업로드 데이터와 별개인 고정 샘플입니다.
+                            준비 데이터를 선택한 축과 집계 방식으로 표시합니다.
                           </p>
                         </div>
                       </div>
-                      <div className="chart-choices">
+                      <div className="p-row" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                        <label>X축 <select aria-label="X축" value={x} onChange={e=>setX(e.target.value)}><option value="">자동 선택</option>{evaluatePreparation(preparation).columns.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</select></label>
+                        <label>Y축 <select aria-label="Y축" value={y} onChange={e=>setY(e.target.value)}><option value="">자동 선택</option>{evaluatePreparation(preparation).columns.filter(c=>c.type==="number").map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</select></label>
+                        <label>집계 <select aria-label="집계 방식" value={aggregation} onChange={e=>setAggregation(e.target.value)}><option value="sum">합계</option><option value="avg">평균</option><option value="count">건수</option></select></label>
+                      </div><div className="chart-choices">
                         {[
                           "생산 실적 비교",
                           "월별 추이",
@@ -1480,20 +1524,10 @@ export default function Workspace({ view }: { view: View }) {
                       <div className="chart-preview">
                         <div className="chart-title">
                           <h3>{title}</h3>
-                          <span className="tag blue">샘플 미리보기</span>
+                          <span className="tag blue">준비 데이터</span>
                         </div>
-                        <MiniChart variant={chartType} large />
-                        <div className="chart-legend">
-                          <span>
-                            <i /> {chartType === 2 ? "A 공정" : "생산 실적"}
-                          </span>
-                          {chartType !== 1 && (
-                            <span>
-                              <i />
-                              {chartType === 2 ? "B 공정" : "생산 계획"}
-                            </span>
-                          )}
-                        </div>
+                        <ResultChart preparation={preparation} x={x} y={y} aggregation={aggregation} variant={chartType} />
+                        
                       </div>
                     </>
                   )}
@@ -1512,16 +1546,15 @@ export default function Workspace({ view }: { view: View }) {
                           인사이트 예시
                         </span>
                       </div>
-                      <MiniChart variant={chartType} large />
+                      <ResultChart preparation={preparation} x={x} y={y} aggregation={aggregation} variant={chartType} />
                       <div className="insight-cards">
                         <div>
                           <span className="stat-icon green">
                             <ChartNoAxesCombined size={20} />
                           </span>
-                          <h4>생산 추이 상승</h4>
+                          <h4>추이 검토</h4>
                           <p>
-                            월별 실적 차트에서 전반적인 상승 흐름을 확인할 수
-                            있습니다.
+                            시간 컬럼을 X축으로 선택하고 기간별 변화 방향을 확인하세요.
                           </p>
                         </div>
                         <div>
@@ -1585,10 +1618,7 @@ export default function Workspace({ view }: { view: View }) {
                       <div className="notice">
                         <ShieldCheck size={20} />
                         <span>
-                          게시하면 이름·날짜·상태·차트 형식만 브라우저에
-                          저장합니다. 준비 결과 데이터셋은 데이터 라이브러리에
-                          별도로 보관됩니다. 분석 작업 단계는 보관하지 않으며
-                          다른 사용자에게 공유되지 않습니다.
+                          분석 목적·유형·데이터 준비·차트 설정·작업 단계를 이 브라우저에 저장하고 복원합니다. 다른 사용자와의 공유는 연결되지 않았습니다.
                         </span>
                       </div>
                     </div>
@@ -1673,13 +1703,14 @@ function AnalysisCard({
       <button className="analysis-open" onClick={onOpen}>
         <h3>{a.title}</h3>
         <p>
-          {a.chart === 0
+          {a.description || (a.chart === 0
             ? "제품별 생산 추이와 계획 대비 달성률"
             : a.chart === 1
               ? "원자재 수급 흐름과 재고 변동 추이"
-              : "주요 공정의 품질 지표와 수율 비교"}
+              : "주요 공정의 품질 지표와 수율 비교")}
         </p>
-        <MiniChart variant={a.chart} />
+        {a.step !== undefined && <p>{a.kind} · {steps[a.step]} · {a.preparation?.datasetName || "데이터 준비 전"}</p>}
+        {a.preparation?.saved ? <ResultChart preparation={a.preparation} x={a.x} y={a.y} aggregation={a.aggregation} variant={a.chart} /> : <MiniChart variant={a.chart} />}
       </button>
       <div className="analysis-card-footer">
         <span className="date">
@@ -1728,3 +1759,5 @@ function DataTable() {
     </div>
   );
 }
+
+

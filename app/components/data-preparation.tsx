@@ -4,6 +4,7 @@ import { Select } from "./select";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
+  Bot,
   Check,
   ChevronRight,
   Database,
@@ -143,6 +144,11 @@ export function DataPreparation({
   const [busy, setBusy] = useState(false);
   const requestId = useRef(0);
   const rootRef = useRef<HTMLElement>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  }, [messages]);
   useEffect(
     () => () => {
       requestId.current++;
@@ -1242,13 +1248,15 @@ export function DataPreparation({
             </div>
           )}
         </div>
-        {state.mode === "ai" && (
-          <aside className="preparation-ai">
+          <aside className="preparation-ai" aria-label="AI 준비 가이드">
             <div className="ai-panel-heading">
-              <Sparkles size={18} />
-              AI 준비 가이드<span>예시</span>
+              <Bot size={24} aria-hidden="true" />
+              <div><strong>AI 준비 가이드</strong><small>단계별 준비 도우미 · 예시 응답</small></div>
             </div>
-            <div className="chat-bubble">
+            <div className="preparation-chat-thread" ref={threadRef} role="log" aria-label="데이터 준비 대화" aria-relevant="additions">
+            <div className="preparation-chat-message">
+              <span className="chat-avatar robot-avatar" aria-label="AI"><Bot size={20} aria-hidden="true" /></span>
+              <div className="chat-message-content"><div className="chat-bubble">
               {
                 [
                   "생산 실적과 제품 마스터를 함께 선택하면 제품 분류별 분석을 할 수 있어요.",
@@ -1259,7 +1267,7 @@ export function DataPreparation({
                   "알아보기 쉬운 이름으로 저장하면 데이터 라이브러리에서 다시 사용할 수 있어요.",
                 ][state.stage]
               }
-            </div>
+            </div></div></div>
             {state.stage === 0 && (
               <div className="suggestion-box">
                 <span>
@@ -1332,19 +1340,25 @@ export function DataPreparation({
             )}
             {messages.map((m, i) => (
               <div className="chat-pair" key={i}>
-                <div className="chat-user">{m}</div>
-                <div className="chat-bubble">
+                <div className="preparation-chat-message user-message">
+                  <div className="chat-message-content"><div className="chat-user">{m}</div></div>
+                  <span className="chat-avatar user-avatar" aria-label="홍길동">홍</span>
+                </div>
+                <div className="preparation-chat-message">
+                  <span className="chat-avatar robot-avatar" aria-label="AI"><Bot size={20} aria-hidden="true" /></span>
+                  <div className="chat-message-content"><div className="chat-bubble">
                   현재 단계의 설정을 확인하고 적용해주세요. 이 안내는 예시
                   응답이며 실제 AI 요청은 전송하지 않습니다.
-                </div>
+                </div></div></div>
               </div>
             ))}
+            </div>
             <form
               className="chat-input"
               onSubmit={(e) => {
                 e.preventDefault();
                 if (chat.trim()) {
-                  setMessages([...messages, chat.trim()]);
+                  setMessages(previous => [...previous, chat.trim()]);
                   setChat("");
                 }
               }}
@@ -1361,7 +1375,6 @@ export function DataPreparation({
               </button>
             </form>
           </aside>
-        )}
       </div>
       <footer className="preparation-footer">
         <span>

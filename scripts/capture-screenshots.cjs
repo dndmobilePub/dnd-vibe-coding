@@ -22,6 +22,7 @@ const path = require('node:path');
     }
     async function capture(name) {
       await ready();
+      await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({ path: path.join('docs/screenshots', name + '.png'), fullPage: true, animations: 'disabled' });
       console.log(name);
     }
@@ -38,6 +39,8 @@ const path = require('node:path');
     await capture('analysis-setup');
     await page.getByRole('button', { name:'다음: 데이터 준비', exact:true }).click();
     await page.getByRole('button', { name:'추천 적용', exact:true }).click();
+    await page.getByRole('textbox', { name:'데이터 가이드 질문' }).fill('제품코드로 데이터를 연결하려면 어떻게 해야 하나요?');
+    await page.getByRole('button', { name:'질문 보내기' }).click();
     await capture('data-preparation');
     await capture('data-checkboxes');
     await page.setViewportSize({ width:390, height:844 }); await capture('data-preparation-mobile');

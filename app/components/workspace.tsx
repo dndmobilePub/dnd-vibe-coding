@@ -1512,7 +1512,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                           </p>
                         </div>
                       </div>
-                      <div className="p-row" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <div className="chart-controls">
                         <label className="select-field">X축 <Select aria-label="X축" value={x} onChange={e=>setX(e.target.value)}><option value="">자동 선택</option>{evaluatePreparation(preparation).columns.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</Select></label>
                         <label className="select-field">Y축 <Select aria-label="Y축" value={y} onChange={e=>setY(e.target.value)}><option value="">자동 선택</option>{evaluatePreparation(preparation).columns.filter(c=>c.type==="number").map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</Select></label>
                         <label className="select-field">집계 <Select aria-label="집계 방식" value={aggregation} onChange={e=>setAggregation(e.target.value)}><option value="sum">합계</option><option value="avg">평균</option><option value="count">건수</option></Select></label>
@@ -1726,8 +1726,10 @@ function AnalysisCard({
               ? "원자재 수급 흐름과 재고 변동 추이"
               : "주요 공정의 품질 지표와 수율 비교")}
         </p>
-        {a.step !== undefined && <p>{a.kind} · {steps[a.step]} · {a.preparation?.datasetName || "데이터 준비 전"}</p>}
-        {a.preparation?.saved ? <ResultChart preparation={a.preparation} x={a.x} y={a.y} aggregation={a.aggregation} variant={a.chart} /> : <MiniChart variant={a.chart} />}
+        <p className="analysis-card-context">{a.step !== undefined ? `${a.kind || "분석"} · ${steps[a.step]}` : "샘플 분석"}</p>
+        <div className="analysis-card-chart">
+          {a.preparation?.saved ? <ResultChart compact preparation={a.preparation} x={a.x} y={a.y} aggregation={a.aggregation} variant={a.chart} /> : <MiniChart variant={a.chart} />}
+        </div>
       </button>
       <div className="analysis-card-footer">
         <span className="date">

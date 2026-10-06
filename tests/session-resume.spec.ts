@@ -24,9 +24,16 @@ test("draft restores setup and updates the original session", async ({ page }) =
 test("chart uses prepared rows and restores axis and aggregation", async ({ page }) => {
   const preparation = { ...createPreparationState(), saved: true, reviewed: true, datasetName: "준비 결과" };
   await page.addInitScript((preparation) => {
-    localStorage.setItem("mnm-analyses", JSON.stringify([{ id: 100, title: "집계 검증", category: "생산 관리", date: "2026.10.06", status: "임시저장", starred: false, chart: 0, step: 2, preparation, x: "product_code", y: "quantity", aggregation: "sum" }]));
+    localStorage.setItem("mnm-analyses", JSON.stringify([
+      { id: 100, title: "집계 검증", category: "생산 관리", date: "2026.10.06", status: "임시저장", starred: false, chart: 0, step: 2, preparation, x: "product_code", y: "quantity", aggregation: "sum" },
+      { id: 99, title: "긴 분석 제목 ".repeat(12), description: "긴 분석 설명 ".repeat(40), category: "생산 관리", date: "2026.10.06", status: "게시됨", starred: false, chart: 1 },
+    ]));
   }, preparation);
   await page.goto("/analyses");
+  await expect(page.getByRole("heading", { name: "집계 검증" })).toBeVisible();
+  const sizes = await page.locator(".analysis-card").evaluateAll(cards => cards.map(card => ({ width: card.getBoundingClientRect().width, height: card.getBoundingClientRect().height })));
+  expect(sizes[0].height).toBe(sizes[1].height);
+  expect(Math.abs(sizes[0].width - sizes[1].width)).toBeLessThan(1);
   await page.getByRole("button").filter({ has: page.getByRole("heading", { name: "집계 검증" }) }).click();
   const chart = page.getByRole("dialog").getByRole("img", { name: "준비 데이터 집계 차트" });
   expect(await chart.locator("rect").count()).toBeGreaterThan(0);

@@ -95,7 +95,7 @@ const datasets = [
     rows: "24,512",
     cols: 8,
     icon: Database,
-    color: "purple",
+    color: "sky",
   },
   {
     id: "stock",
@@ -153,8 +153,8 @@ function MiniChart({
         <svg viewBox="0 0 400 120" preserveAspectRatio="none">
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop stopColor="#8972ed" stopOpacity=".2" />
-              <stop offset="1" stopColor="#8972ed" stopOpacity="0" />
+              <stop stopColor="#2584ce" stopOpacity=".2" />
+              <stop offset="1" stopColor="#2584ce" stopOpacity="0" />
             </linearGradient>
           </defs>
           <path
@@ -164,7 +164,7 @@ function MiniChart({
           <path
             d="M0 100 C25 105 35 70 65 77 S105 105 135 65 S180 80 210 43 S245 77 270 46 S305 60 335 26 S370 35 400 10"
             fill="none"
-            stroke="#8972ed"
+            stroke="#2584ce"
             strokeWidth="3"
           />
         </svg>
@@ -639,7 +639,7 @@ export default function Page() {
                   setNotifications(false);
                 }}
               >
-                <span className="activity-icon purple">
+                <span className="activity-icon sky">
                   <Sparkles size={17} />
                 </span>
                 <span>
@@ -736,7 +736,7 @@ export default function Page() {
                     value: 3,
                     unit: "개",
                     icon: Database,
-                    color: "purple",
+                    color: "sky",
                     note: "샘플 데이터셋을 탐색하세요",
                     action: "data" as View,
                   },
@@ -817,7 +817,7 @@ export default function Page() {
                 <section className="recommendations">
                   <div className="section-heading">
                     <h2>
-                      <Sparkles size={18} className="purple-text" />
+                      <Sparkles size={18} className="accent-text" />
                       나를 위한 AI 추천
                     </h2>
                     <span className="subtle-label">샘플 추천</span>
@@ -835,7 +835,7 @@ export default function Page() {
                     },
                     {
                       icon: Workflow,
-                      color: "purple",
+                      color: "sky",
                       title: "공정별 품질 편차를 한눈에",
                       desc: "공정별 수율을 비교해 개선 기회를 찾아보세요.",
                       tag: "품질 분석",
@@ -890,7 +890,7 @@ export default function Page() {
                       },
                       {
                         icon: Sparkles,
-                        color: "purple",
+                        color: "sky",
                         title: "AI가 새로운 패턴을 발견했어요",
                         text: "A 공정의 생산 수율 추이를 확인해보세요.",
                         time: "샘플 · 2시간 전",
@@ -1335,7 +1335,7 @@ export default function Page() {
                   {step === 0 && (
                     <div className="setup-step">
                       <div className="step-title">
-                        <span className="stat-icon purple">
+                        <span className="stat-icon sky">
                           <Sparkles size={24} />
                         </span>
                         <h3>어떤 인사이트를 찾고 싶으세요?</h3>
@@ -1742,7 +1742,7 @@ export default function Page() {
                             업로드 데이터의 분석 결과가 아닙니다.
                           </p>
                         </div>
-                        <span className="tag purple">
+                        <span className="tag sky">
                           <Sparkles size={13} />
                           인사이트 예시
                         </span>
@@ -1770,7 +1770,7 @@ export default function Page() {
                           </p>
                         </div>
                         <div>
-                          <span className="stat-icon purple">
+                          <span className="stat-icon sky">
                             <Sparkles size={20} />
                           </span>
                           <h4>다음 분석 제안</h4>
@@ -1897,7 +1897,7 @@ function AnalysisCard({
     <article className="analysis-card">
       <div className="analysis-card-top">
         <span
-          className={`tag ${a.chart === 1 ? "purple" : a.chart === 2 ? "green" : "blue"}`}
+          className={`tag ${a.chart === 1 ? "sky" : a.chart === 2 ? "green" : "blue"}`}
         >
           {a.category}
         </span>

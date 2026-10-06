@@ -1,4 +1,5 @@
 ﻿"use client";
+import { Select } from "./select";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { ResultChart } from "./result-chart";
@@ -1207,7 +1208,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                       />
                     </label>
                   </div>
-                  <label>정렬 <select aria-label="분석 정렬" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">최근 저장순</option><option value="name">이름순</option></select></label>
+                  <label className="select-field">정렬 <Select aria-label="분석 정렬" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">최근 저장순</option><option value="name">이름순</option></Select></label>
                   <p className="search-summary" role="status">{filtered.length}개의 분석{query.trim() ? ` · “${query.trim()}” 검색 결과` : ""}</p>
                   <div className="analysis-grid">
                     {filtered.map((a) => (
@@ -1451,8 +1452,8 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                         />
                         <small>{title.length}/100</small>
                       </label>
-                      <label className="field">분석 유형<select value={kind} onChange={e=>setKind(e.target.value)}>{["원인 분석", "추이 모니터링", "비교 분석", "예측"].map(k=><option key={k}>{k}</option>)}</select></label>
-                      <label className="field">도메인<select value={domain} onChange={e=>setDomain(e.target.value)}>{["생산 관리", "품질 관리", "설비 보전", "구매 · 자재", "물류 · 재고"].map(k=><option key={k}>{k}</option>)}</select></label>
+                      <label className="field">분석 유형<Select value={kind} onChange={e=>setKind(e.target.value)}>{["원인 분석", "추이 모니터링", "비교 분석", "예측"].map(k=><option key={k}>{k}</option>)}</Select></label>
+                      <label className="field">도메인<Select value={domain} onChange={e=>setDomain(e.target.value)}>{["생산 관리", "품질 관리", "설비 보전", "구매 · 자재", "물류 · 재고"].map(k=><option key={k}>{k}</option>)}</Select></label>
                       <label className="field">
                         분석 목적
                         <textarea
@@ -1512,9 +1513,9 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                         </div>
                       </div>
                       <div className="p-row" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                        <label>X축 <select aria-label="X축" value={x} onChange={e=>setX(e.target.value)}><option value="">자동 선택</option>{evaluatePreparation(preparation).columns.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</select></label>
-                        <label>Y축 <select aria-label="Y축" value={y} onChange={e=>setY(e.target.value)}><option value="">자동 선택</option>{evaluatePreparation(preparation).columns.filter(c=>c.type==="number").map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</select></label>
-                        <label>집계 <select aria-label="집계 방식" value={aggregation} onChange={e=>setAggregation(e.target.value)}><option value="sum">합계</option><option value="avg">평균</option><option value="count">건수</option></select></label>
+                        <label className="select-field">X축 <Select aria-label="X축" value={x} onChange={e=>setX(e.target.value)}><option value="">자동 선택</option>{evaluatePreparation(preparation).columns.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</Select></label>
+                        <label className="select-field">Y축 <Select aria-label="Y축" value={y} onChange={e=>setY(e.target.value)}><option value="">자동 선택</option>{evaluatePreparation(preparation).columns.filter(c=>c.type==="number").map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</Select></label>
+                        <label className="select-field">집계 <Select aria-label="집계 방식" value={aggregation} onChange={e=>setAggregation(e.target.value)}><option value="sum">합계</option><option value="avg">평균</option><option value="count">건수</option></Select></label>
                       </div><div className="chart-choices">
                         {[
                           "생산 실적 비교",
@@ -1775,5 +1776,6 @@ function DataTable() {
     </div>
   );
 }
+
 
 

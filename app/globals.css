@@ -15,6 +15,7 @@
 }
 
 .analysis-page { margin-left: 244px; padding: 28px 40px 40px; }
+.select-field { display: flex; flex-direction: column; gap: 6px; width: 200px; max-width: 100%; color: var(--muted); font-size: 14px; }
 .analysis-editor { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
 .analysis-editor .workflow-body { overflow: visible; }
 .analysis-editor .workflow-footer { background: var(--surface); border-radius: 0 0 var(--radius) var(--radius); }

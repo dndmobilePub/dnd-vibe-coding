@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { Select } from "./select";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -616,7 +617,7 @@ export function DataPreparation({
             <>
               <label className="field">
                 주 데이터
-                <select
+                <Select
                   aria-label="조회할 주 데이터"
                   value={state.main}
                   onChange={(e) => switchMain(e.target.value)}
@@ -628,7 +629,7 @@ export function DataPreparation({
                         {s.title}
                       </option>
                     ))}
-                </select>
+                </Select>
               </label>
               <section className="column-selection">
                 <div className="section-heading">
@@ -705,7 +706,7 @@ export function DataPreparation({
                 </div>
                 {state.filters.map((f) => (
                   <div className="filter-rule" key={f.id}>
-                    <select
+                    <Select
                       aria-label="필터 컬럼"
                       value={f.column}
                       onChange={(e) =>
@@ -723,8 +724,8 @@ export function DataPreparation({
                           {c.label}
                         </option>
                       ))}
-                    </select>
-                    <select
+                    </Select>
+                    <Select
                       aria-label="필터 연산자"
                       value={f.op}
                       onChange={(e) =>
@@ -741,7 +742,7 @@ export function DataPreparation({
                       <option value="equals">같음</option>
                       <option value="gte">이상 (숫자)</option>
                       <option value="lte">이하 (숫자)</option>
-                    </select>
+                    </Select>
                     <input
                       aria-label="필터 값"
                       placeholder="값 입력"
@@ -777,7 +778,7 @@ export function DataPreparation({
               <div className="form-grid">
                 <label className="field">
                   정렬 컬럼
-                  <select
+                  <Select
                     aria-label="정렬 컬럼"
                     value={state.sortColumn}
                     onChange={(e) => update({ sortColumn: e.target.value })}
@@ -788,11 +789,11 @@ export function DataPreparation({
                         {c.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
                 <label className="field">
                   정렬 순서
-                  <select
+                  <Select
                     aria-label="정렬 순서"
                     value={state.sortDirection}
                     onChange={(e) =>
@@ -803,7 +804,7 @@ export function DataPreparation({
                   >
                     <option value="asc">오름차순</option>
                     <option value="desc">내림차순</option>
-                  </select>
+                  </Select>
                 </label>
               </div>
               <DatasetTable columns={result.columns} rows={result.rows} />
@@ -842,7 +843,7 @@ export function DataPreparation({
               <div className="form-grid">
                 <label className="field">
                   주 데이터
-                  <select
+                  <Select
                     aria-label="연결 주 데이터"
                     value={state.main}
                     onChange={(e) => switchMain(e.target.value)}
@@ -854,11 +855,11 @@ export function DataPreparation({
                           {s.title}
                         </option>
                       ))}
-                  </select>
+                  </Select>
                 </label>
                 <label className="field">
                   연결할 데이터
-                  <select
+                  <Select
                     aria-label="연결할 데이터"
                     value={state.related}
                     onChange={(e) => {
@@ -889,14 +890,14 @@ export function DataPreparation({
                           {s.title}
                         </option>
                       ))}
-                  </select>
+                  </Select>
                 </label>
               </div>
               {related && (
                 <>
                   <label className="field">
                     조인 유형
-                    <select
+                    <Select
                       aria-label="조인 유형"
                       value={state.joinType}
                       onChange={(e) =>
@@ -908,7 +909,7 @@ export function DataPreparation({
                     >
                       <option>LEFT JOIN</option>
                       <option>INNER JOIN</option>
-                    </select>
+                    </Select>
                     <small>
                       LEFT는 주 데이터의 모든 행을 유지하고, INNER는 키가
                       일치하는 행만 남깁니다.
@@ -935,7 +936,7 @@ export function DataPreparation({
                   </div>
                   {state.keys.map((k, i) => (
                     <div className="join-key-row" key={i}>
-                      <select
+                      <Select
                         aria-label={`왼쪽 연결 키 ${i + 1}`}
                         value={k.left}
                         onChange={(e) =>
@@ -951,9 +952,9 @@ export function DataPreparation({
                             {c.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                       <span>=</span>
-                      <select
+                      <Select
                         aria-label={`오른쪽 연결 키 ${i + 1}`}
                         value={k.right}
                         onChange={(e) =>
@@ -969,7 +970,7 @@ export function DataPreparation({
                             {c.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                       <button
                         className="icon-button"
                         aria-label={`연결 키 ${i + 1} 삭제`}
@@ -1051,7 +1052,7 @@ export function DataPreparation({
                   <div className="form-grid">
                     <label className="field">
                       분자
-                      <select
+                      <Select
                         aria-label="계산 분자"
                         value={state.numerator}
                         onChange={(e) => update({ numerator: e.target.value })}
@@ -1064,11 +1065,11 @@ export function DataPreparation({
                               {c.label}
                             </option>
                           ))}
-                      </select>
+                      </Select>
                     </label>
                     <label className="field">
                       분모
-                      <select
+                      <Select
                         aria-label="계산 분모"
                         value={state.denominator}
                         onChange={(e) =>
@@ -1083,14 +1084,14 @@ export function DataPreparation({
                               {c.label}
                             </option>
                           ))}
-                      </select>
+                      </Select>
                     </label>
                   </div>
                 )}
               </div>
               <label className="field">
                 집계 기준
-                <select
+                <Select
                   aria-label="집계 기준"
                   value={state.aggregateBy}
                   onChange={(e) => update({ aggregateBy: e.target.value })}
@@ -1107,7 +1108,7 @@ export function DataPreparation({
                         {c.label}별 합계
                       </option>
                     ))}
-                </select>
+                </Select>
                 <small>
                   선택 시 같은 값끼리 묶어 숫자 컬럼의 합계와 행 수를
                   계산합니다. 비율은 합산하지 않습니다.
@@ -1386,3 +1387,4 @@ export function DataPreparation({
     </section>
   );
 }
+

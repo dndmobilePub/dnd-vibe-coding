@@ -195,6 +195,7 @@ const viewPaths: Record<View, string> = {
 
 export default function Workspace({ view }: { view: View }) {
   const router = useRouter();
+  const [ready, setReady] = useState(false);
   const [analyses, setAnalyses] = useState(initialAnalyses);
   const [query, setQuery] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -220,6 +221,7 @@ export default function Workspace({ view }: { view: View }) {
   const [emailUpdates, setEmailUpdates] = useState(true);
   const modalRef = useRef<HTMLDivElement>(null);
   const restoreFocus = useRef<HTMLElement | null>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try {
@@ -256,6 +258,7 @@ export default function Workspace({ view }: { view: View }) {
           ),
         );
     } catch {}
+    setReady(true);
   }, []);
   useEffect(() => {
     if (!toast) return;
@@ -357,6 +360,7 @@ export default function Workspace({ view }: { view: View }) {
     setError("");
     if (step === 0 && !title.trim()) {
       setError("분석 이름을 입력해주세요.");
+      titleRef.current?.focus();
       return;
     }
     if (step === 1 && !preparation.saved) {
@@ -381,12 +385,18 @@ export default function Workspace({ view }: { view: View }) {
     URL.revokeObjectURL(url);
     setToast("샘플 데이터 CSV를 내려받았습니다.");
   };
+  const visibleDatasets = datasets.filter((d) =>
+    `${d.title} ${d.desc}`.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+  const visibleSavedDatasets = savedDatasets.filter((d) =>
+    d.name.toLowerCase().includes(query.trim().toLowerCase()),
+  );
   const filtered = analyses.filter(
     (a) =>
       (view !== "favorites" || a.starred) &&
       (view !== "reports" || a.status === "게시됨") &&
       (filter === "전체" || a.status === filter) &&
-      a.title.toLowerCase().includes(query.toLowerCase()),
+      a.title.toLowerCase().includes(query.trim().toLowerCase()),
   );
   const navs: { id: View; label: string; icon: typeof Home }[] = [
     { id: "home", label: "워크스페이스", icon: Home },
@@ -405,7 +415,7 @@ export default function Workspace({ view }: { view: View }) {
   }[view];
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" inert={!ready} aria-busy={!ready}>
       <a className="skip-link" href="#main">
         본문으로 건너뛰기
       </a>
@@ -416,7 +426,7 @@ export default function Workspace({ view }: { view: View }) {
           onClick={() => setMobileMenu(false)}
         />
       )}
-      <aside className={`sidebar ${mobileMenu ? "mobile-open" : ""}`}>
+      <aside id="workspace-navigation" className={`sidebar ${mobileMenu ? "mobile-open" : ""}`}>
         <button
           className="brand"
           onClick={() => navigate("home")}
@@ -503,7 +513,9 @@ export default function Workspace({ view }: { view: View }) {
           <div className="breadcrumb">
             <button
               className="icon-button mobile-toggle"
-              aria-label="메뉴 열기"
+              aria-label={mobileMenu ? "메뉴 닫기" : "메뉴 열기"}
+              aria-expanded={mobileMenu}
+              aria-controls="workspace-navigation"
               onClick={() => setMobileMenu(true)}
             >
               <Menu size={22} />
@@ -603,7 +615,7 @@ export default function Workspace({ view }: { view: View }) {
                 <div>
                   <div className="eyebrow">YOUR DAILY INSIGHT</div>
                   <h1>
-                    안녕하세요, 홍길동님 <span className="wave">✦</span>
+                    안녕하세요, 홍길동님 <Sparkles className="wave" size={24} aria-hidden="true" />
                   </h1>
                   <p>오늘의 데이터에서 새로운 가능성을 발견해보세요.</p>
                 </div>
@@ -623,14 +635,14 @@ export default function Workspace({ view }: { view: View }) {
                     <Sparkles size={13} />
                     MnM AI
                   </span>
-                  당신의 데이터 분석 파트너
+                  질문으로 시작하는 분석
                 </div>
                 <h2 id="hero-title">
-                  궁금한 것을 물어보세요.
+                  데이터에 질문하고,
                   <br />
-                  <span>인사이트는 AI가 찾아드릴게요.</span>
+                  <span>다음 인사이트를 발견하세요.</span>
                 </h2>
-                <p>복잡한 쿼리 없이, 일상의 언어로 데이터를 탐색하세요.</p>
+                <p>궁금한 내용을 입력하면 분석 설정을 시작할 수 있어요.</p>
                 <form
                   className="prompt-form"
                   onSubmit={(e: FormEvent) => {
@@ -641,6 +653,7 @@ export default function Workspace({ view }: { view: View }) {
                   <Sparkles className="prompt-icon" size={20} />
                   <input
                     aria-label="AI 분석 질문"
+                    aria-describedby="prompt-hint"
                     placeholder="예: 지난달 대비 제품별 생산 실적은 어떻게 달라졌어?"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
@@ -654,6 +667,7 @@ export default function Workspace({ view }: { view: View }) {
                     <ArrowRight size={21} />
                   </button>
                 </form>
+                <p id="prompt-hint" className="prompt-hint">샘플 환경 · 질문을 바탕으로 분석을 설정합니다.</p>
                 <div className="prompt-suggestions">
                   <span>이렇게 시작해보세요</span>
                   {prompts.map((p) => (
@@ -980,15 +994,10 @@ export default function Workspace({ view }: { view: View }) {
                     </span>
                   </div>
                   <div className="dataset-grid">
-                    {datasets
-                      .filter((d) =>
-                        `${d.title} ${d.desc}`
-                          .toLowerCase()
-                          .includes(query.toLowerCase()),
-                      )
-                      .map((d) => (
+                    {visibleDatasets.map((d) => (
                         <button
                           className={`dataset-card ${previewData === d.id ? "selected" : ""}`}
+                          aria-pressed={previewData === d.id}
                           key={d.id}
                           onClick={() => setPreviewData(d.id)}
                         >
@@ -1010,13 +1019,10 @@ export default function Workspace({ view }: { view: View }) {
                           </span>
                         </button>
                       ))}
-                    {savedDatasets
-                      .filter((d) =>
-                        d.name.toLowerCase().includes(query.toLowerCase()),
-                      )
-                      .map((d) => (
+                    {visibleSavedDatasets.map((d) => (
                         <button
                           className={`dataset-card ${previewData === d.id ? "selected" : ""}`}
+                          aria-pressed={previewData === d.id}
                           key={d.id}
                           onClick={() => setPreviewData(d.id)}
                         >
@@ -1042,20 +1048,14 @@ export default function Workspace({ view }: { view: View }) {
                         </button>
                       ))}
                   </div>
-                  {!savedDatasets.some((d) =>
-                    d.name.toLowerCase().includes(query.toLowerCase()),
-                  ) &&
-                    !datasets.some((d) =>
-                      `${d.title} ${d.desc}`
-                        .toLowerCase()
-                        .includes(query.toLowerCase()),
-                    ) && (
-                      <div className="empty-state">
-                        <Search size={30} />
-                        <h2>검색 결과가 없어요</h2>
-                        <p>다른 데이터 이름으로 검색해보세요.</p>
-                      </div>
-                    )}
+                  {visibleDatasets.length + visibleSavedDatasets.length === 0 && (
+                    <div className="empty-state">
+                      <Search size={32} aria-hidden="true" />
+                      <h2>검색 결과가 없어요</h2>
+                      <p>데이터 이름이나 설명의 다른 단어로 검색해보세요.</p>
+                      <button className="button secondary" onClick={() => setQuery("")}>검색 초기화</button>
+                    </div>
+                  )}
                   {previewData &&
                     !savedDatasets.some((d) => d.id === previewData) && (
                       <section className="data-preview">
@@ -1148,6 +1148,7 @@ export default function Workspace({ view }: { view: View }) {
                       />
                     </label>
                   </div>
+                  <p className="search-summary" role="status">{filtered.length}개의 분석{query.trim() ? ` · “${query.trim()}” 검색 결과` : ""}</p>
                   <div className="analysis-grid">
                     {filtered.map((a) => (
                       <AnalysisCard
@@ -1165,12 +1166,16 @@ export default function Workspace({ view }: { view: View }) {
                     <div className="empty-state">
                       <Search size={32} />
                       <h2>
-                        {view === "favorites"
+                        {query.trim() || filter !== "전체"
+                          ? "검색 조건에 맞는 분석이 없어요"
+                          : view === "favorites"
                           ? "즐겨찾는 분석을 모아보세요"
                           : "아직 표시할 분석이 없어요"}
                       </h2>
                       <p>
-                        {view === "favorites"
+                        {query.trim() || filter !== "전체"
+                          ? "검색어 또는 상태 필터를 바꿔보세요."
+                          : view === "favorites"
                           ? "분석 카드의 별을 누르면 여기에 표시됩니다."
                           : "검색 조건을 바꾸거나 새로운 분석을 시작해보세요."}
                       </p>
@@ -1376,6 +1381,9 @@ export default function Workspace({ view }: { view: View }) {
                       <label className="field">
                         분석 이름 <span>*</span>
                         <input
+                          ref={titleRef}
+                          aria-invalid={!!error && !title.trim()}
+                          aria-describedby={error && !title.trim() ? "analysis-error" : undefined}
                           placeholder="예: 9월 제품별 생산 실적 분석"
                           value={title}
                           onChange={(e) => setTitle(e.target.value)}
@@ -1580,7 +1588,7 @@ export default function Workspace({ view }: { view: View }) {
                     </div>
                   )}
                   {error && (
-                    <div className="form-error" role="alert">
+                    <div id="analysis-error" className="form-error" role="alert">
                       {error}
                     </div>
                   )}

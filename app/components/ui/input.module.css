@@ -1,0 +1,28 @@
+.control.control {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  border: 1px solid var(--input-border);
+  border-radius: var(--control-radius);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--font-size-body);
+  line-height: 22px;
+}
+.control.control:focus-visible {
+  border-color: var(--focus);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.control.control:disabled {
+  background: var(--bg);
+  color: var(--muted);
+  opacity: .65;
+  cursor: not-allowed;
+}
+.control.control[aria-invalid="true"] { border-color: var(--color-danger); }
+.multiline.multiline { min-height: 95px; resize: vertical; line-height: 1.8; }
+@media (max-width: 760px) { .control.control { font-size: 16px; } }

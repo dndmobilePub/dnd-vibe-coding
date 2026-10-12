@@ -1,10 +1,11 @@
-﻿"use client";
+"use client";
+import { Button } from "./ui/button";
 import { Select } from "./select";
+import type { ToastVariant } from "./toast";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
-  Bot,
   Check,
   ChevronRight,
   Database,
@@ -14,10 +15,8 @@ import {
   Layers,
   Plus,
   Search,
-  Send,
   ShieldCheck,
   Sigma,
-  Sparkles,
   Trash2,
   Upload,
   Workflow,
@@ -131,24 +130,19 @@ export function DataPreparation({
   state,
   onChange,
   onSave,
+  onNotify,
 }: {
   state: PreparationState;
   onChange: (next: PreparationState) => void;
   onSave: (dataset: SavedDataset) => void;
+  onNotify: (message: string, variant?: ToastVariant) => void;
 }) {
   const [search, setSearch] = useState("");
-  const [error, setError] = useState("");
-  const [chat, setChat] = useState("");
-  const [messages, setMessages] = useState<string[]>([]);
+  const setError = (message: string) => { if (message) onNotify(message, "error"); };
   const [recent, setRecent] = useState<SavedDataset[]>([]);
   const [busy, setBusy] = useState(false);
   const requestId = useRef(0);
   const rootRef = useRef<HTMLElement>(null);
-  const threadRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const thread = threadRef.current;
-    if (thread) thread.scrollTop = thread.scrollHeight;
-  }, [messages]);
   useEffect(
     () => () => {
       requestId.current++;
@@ -157,7 +151,7 @@ export function DataPreparation({
   );
   useEffect(() => {
     rootRef.current
-      ?.closest<HTMLElement>(".workflow-body")
+      ?.querySelector<HTMLElement>(".preparation-layout")
       ?.scrollTo({ top: 0 });
     rootRef.current
       ?.querySelector<HTMLElement>(".preparation-heading h3")
@@ -285,7 +279,8 @@ export function DataPreparation({
       return;
     }
     if (state.stage === 4 && !state.reviewed) {
-      setError("데이터 품질 검증을 실행해주세요.");
+      setError("");
+      onNotify("데이터 품질 검증을 실행해주세요.");
       return;
     }
     update(
@@ -303,13 +298,18 @@ export function DataPreparation({
       !result.columns.length ||
       result.invalidNumbers
     ) {
-      setError(
+      setError("");
+      onNotify(
         result.joinError ||
           "결과가 비어 있거나 숫자 형식 오류가 있습니다. 조회·전처리 설정을 수정해주세요.",
       );
       return;
     }
     update({ reviewed: true }, false);
+    onNotify(
+      `검증 완료 · ${result.missing || result.duplicates ? `결측 셀 ${result.missing}개, 중복 행 ${result.duplicates}개를 확인해주세요. 전처리하거나 원본 상태로 저장할 수 있습니다.` : "데이터 품질 정상"}`,
+      "success",
+    );
   };
   const save = () => {
     if (
@@ -318,7 +318,8 @@ export function DataPreparation({
       !result.rows.length ||
       !result.columns.length
     ) {
-      setError("결과 보기에서 데이터 품질을 검증해주세요.");
+      setError("");
+      onNotify("결과 보기에서 데이터 품질을 검증해주세요.");
       return;
     }
     if (!state.datasetName.trim()) {
@@ -349,6 +350,7 @@ export function DataPreparation({
       );
       onChange({ ...state, saved: true, datasetId: dataset.id });
       onSave(dataset);
+      onNotify("데이터셋을 저장했습니다. 다음 버튼으로 차트 단계로 이동하세요.", "success");
       setError("");
     } catch {
       setError(
@@ -372,17 +374,43 @@ export function DataPreparation({
     >
       <div className="preparation-progress">
         <div>
-          <strong>데이터 준비</strong>
+          <strong className="sr-only">데이터 준비</strong>
           <span>{state.saved ? 6 : state.stage} / 6 완료</span>
-          <span className="preparation-progress-track">
+          <span className="preparation-progress-track" role="progressbar" aria-label="데이터 준비 완료 진행률" aria-valuemin={0} aria-valuemax={6} aria-valuenow={state.saved ? 6 : state.stage}>
             <i
               style={{
-                width: `${((state.saved ? 6 : state.stage) / 6) * 100}%`,
+                transform: `scaleX(${(state.saved ? 6 : state.stage) / 6})`,
               }}
             />
           </span>
         </div>
-        <span>브라우저에서 실제 처리 · 샘플/CSV</span>
+      <div className="preparation-header-actions">
+        <span>
+          {state.selected.length}개 소스 선택
+        </span>
+        <div>
+          {state.stage > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => update({ stage: state.stage - 1 }, false)}
+            >
+              이전 준비 단계
+            </Button>
+          )}
+          {state.stage === 4 && (
+            <Button variant="secondary" onClick={validate}>
+              데이터 검증
+              <ShieldCheck size={16} />
+            </Button>
+          )}
+          {state.stage < 5 && (
+            <Button variant="primary" disabled={busy} onClick={goNext}>
+              다음: {stages[state.stage + 1]}
+              <ArrowRight size={15} />
+            </Button>
+          )}
+        </div>
+      </div>
       </div>
       <ol className="preparation-stages">
         {stages.map((s, i) => (
@@ -412,28 +440,9 @@ export function DataPreparation({
           </li>
         ))}
       </ol>
-      <div className="preparation-heading">
-        <div>
-          <h3 tabIndex={-1}>{stages[state.stage]}</h3>
-          <p>{descriptions[state.stage]}</p>
-        </div>
-        <div className="segmented">
-          <button
-            aria-pressed={state.mode === "ai"}
-            className={state.mode === "ai" ? "selected" : ""}
-            onClick={() => update({ mode: "ai" }, false)}
-          >
-            <Sparkles size={14} />
-            AI 가이드
-          </button>
-          <button
-            aria-pressed={state.mode === "manual"}
-            className={state.mode === "manual" ? "selected" : ""}
-            onClick={() => update({ mode: "manual" }, false)}
-          >
-            직접 설정
-          </button>
-        </div>
+      <div className="preparation-heading sr-only">
+        <h3 tabIndex={-1}>{stages[state.stage]}</h3>
+        <p>{descriptions[state.stage]}</p>
       </div>
       <div className="preparation-layout">
         <aside className="preparation-tools">
@@ -459,7 +468,7 @@ export function DataPreparation({
             ))}
           </div>
         </aside>
-        <div className="preparation-content">
+        <div className="preparation-content" key={state.stage}>
           {state.stage === 0 && (
             <>
               <div className="filter-tabs">
@@ -991,15 +1000,6 @@ export function DataPreparation({
                   ))}
                 </>
               )}
-              <div className="notice">
-                <Workflow size={18} />
-                <span>
-                  선택한 소스 중 주 데이터와 연결 데이터 두 개를 결합합니다.
-                  연결 키의 빈 값은 일치시키지 않습니다.{" "}
-                  {result.joinError ||
-                    `현재 결과 ${result.rows.length}행 · ${result.columns.length}열`}
-                </span>
-              </div>
               <DatasetTable columns={result.columns} rows={result.rows} />
             </>
           )}
@@ -1154,28 +1154,6 @@ export function DataPreparation({
                 rows={result.rows}
                 pageSize={10}
               />
-              <div className="validation-bar">
-                <span className={state.reviewed ? "validation-success" : ""}>
-                  <ShieldCheck size={18} />
-                  {state.reviewed
-                    ? `검증 완료 · ${result.missing || result.duplicates ? "결측/중복 경고 확인 필요" : "데이터 품질 정상"}`
-                    : "실제 결과의 빈 값·중복·숫자 형식을 검사합니다."}
-                </span>
-                <button className="button secondary" onClick={validate}>
-                  데이터 검증
-                  <ShieldCheck size={16} />
-                </button>
-              </div>
-              {!!(result.missing || result.duplicates) && (
-                <div className="notice">
-                  <ShieldCheck size={18} />
-                  <span>
-                    결측 셀 {result.missing}개, 중복 행 {result.duplicates}개가
-                    있습니다. 전처리에서 수정하거나, 경고를 확인하고 원본 상태로
-                    저장할 수 있습니다.
-                  </span>
-                </div>
-              )}
             </>
           )}
           {state.stage === 5 && (
@@ -1202,17 +1180,9 @@ export function DataPreparation({
                   }
                 />
               </label>
-              <div className="notice">
-                <ShieldCheck size={18} />
-                <span>
-                  저장하면 결과 데이터가 현재 브라우저의 데이터 라이브러리에
-                  보관됩니다. 다른 사용자에게 공유되지 않으며, 브라우저 데이터를
-                  삭제하면 사라집니다.
-                </span>
-              </div>
               <div className="save-dataset-actions">
-                <button
-                  className="button secondary"
+                <Button
+                  variant="secondary"
                   onClick={() =>
                     downloadDataset({
                       name: state.datasetName || "준비된_데이터",
@@ -1223,180 +1193,23 @@ export function DataPreparation({
                 >
                   <Download size={16} />
                   결과 CSV 다운로드
-                </button>
-                <button
-                  className="button primary"
+                </Button>
+                <Button
+                  variant="primary"
                   onClick={save}
                   disabled={state.saved}
                 >
                   {state.saved ? <Check size={16} /> : <Database size={16} />}{" "}
                   {state.saved ? "데이터셋 저장 완료" : "데이터셋 저장"}
-                </button>
+                </Button>
               </div>
-              {state.saved && (
-                <div className="saved-confirmation" role="status">
-                  <Check size={18} />
-                  데이터 준비가 완료되었습니다. 하단의 다음 버튼으로 차트 단계에
-                  이동하세요.
-                </div>
-              )}
             </>
           )}
-          {error && (
-            <div className="form-error" role="alert">
-              {error}
-            </div>
-          )}
+
         </div>
-          <aside className="preparation-ai" aria-label="AI 준비 가이드">
-            <div className="ai-panel-heading">
-              <Bot size={24} aria-hidden="true" />
-              <div><strong>AI 준비 가이드</strong><small>단계별 준비 도우미 · 예시 응답</small></div>
-            </div>
-            <div className="preparation-chat-thread" ref={threadRef} role="log" aria-label="데이터 준비 대화" aria-relevant="additions">
-            <div className="preparation-chat-message">
-              <span className="chat-avatar robot-avatar" aria-label="AI"><Bot size={20} aria-hidden="true" /></span>
-              <div className="chat-message-content"><div className="chat-bubble">
-              {
-                [
-                  "생산 실적과 제품 마스터를 함께 선택하면 제품 분류별 분석을 할 수 있어요.",
-                  "생산일자·제품코드·생산수량은 주요 조회 컬럼이에요. 필요한 범위로 필터를 설정해보세요.",
-                  "제품코드로 LEFT JOIN하면 제품 마스터에 없는 실적도 유지할 수 있어요.",
-                  "샘플에는 빈 공정과 중복 실적이 있어요. 결측 제외·중복 제거 옵션으로 정리해보세요.",
-                  "숫자 형식 오류는 저장 전에 해결해야 해요. 결측·중복 경고도 함께 확인하세요.",
-                  "알아보기 쉬운 이름으로 저장하면 데이터 라이브러리에서 다시 사용할 수 있어요.",
-                ][state.stage]
-              }
-            </div></div></div>
-            {state.stage === 0 && (
-              <div className="suggestion-box">
-                <span>
-                  <Sparkles size={14} />
-                  추천 데이터
-                </span>
-                <strong>MES_일별생산실적 + 제품_마스터</strong>
-                <p>제품 분류와 규격을 실적에 연결합니다.</p>
-                <button className="button primary" onClick={recommend}>
-                  추천 적용
-                  <Check size={14} />
-                </button>
-              </div>
-            )}
-            {state.stage === 2 && (
-              <button
-                className="button secondary ai-apply"
-                onClick={() => {
-                  const key = main?.columns.find((c) =>
-                    related?.columns.some((r) => r.key === c.key),
-                  );
-                  if (!key) {
-                    setError("공통 컬럼이 없어 키를 직접 선택해야 합니다.");
-                    return;
-                  }
-                  update({
-                    joinType: "LEFT JOIN",
-                    keys: [{ left: key.key, right: key.key }],
-                  });
-                }}
-              >
-                공통 키 추천 적용
-              </button>
-            )}
-            {state.stage === 1 && (
-              <button
-                className="button secondary ai-apply"
-                onClick={() => {
-                  const recommended =
-                    main?.columns
-                      .filter((c) =>
-                        [
-                          "date",
-                          "product_code",
-                          "process",
-                          "quantity",
-                          "planned",
-                        ].includes(c.key),
-                      )
-                      .map((c) => c.key) || [];
-                  update({
-                    selectedColumns: recommended.length
-                      ? recommended
-                      : main?.columns.map((c) => c.key) || [],
-                  });
-                }}
-              >
-                추천 컬럼 적용
-                <Check size={14} />
-              </button>
-            )}
-            {state.stage === 3 && (
-              <button
-                className="button secondary ai-apply"
-                onClick={() => update({ dropMissing: true, deduplicate: true })}
-              >
-                추천 정리 적용
-                <Check size={14} />
-              </button>
-            )}
-            {messages.map((m, i) => (
-              <div className="chat-pair" key={i}>
-                <div className="preparation-chat-message user-message">
-                  <div className="chat-message-content"><div className="chat-user">{m}</div></div>
-                  <span className="chat-avatar user-avatar" aria-label="홍길동">홍</span>
-                </div>
-                <div className="preparation-chat-message">
-                  <span className="chat-avatar robot-avatar" aria-label="AI"><Bot size={20} aria-hidden="true" /></span>
-                  <div className="chat-message-content"><div className="chat-bubble">
-                  현재 단계의 설정을 확인하고 적용해주세요. 이 안내는 예시
-                  응답이며 실제 AI 요청은 전송하지 않습니다.
-                </div></div></div>
-              </div>
-            ))}
-            </div>
-            <form
-              className="chat-input"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (chat.trim()) {
-                  setMessages(previous => [...previous, chat.trim()]);
-                  setChat("");
-                }
-              }}
-            >
-              <input
-                aria-label="데이터 가이드 질문"
-                value={chat}
-                maxLength={300}
-                onChange={(e) => setChat(e.target.value)}
-                placeholder="준비 방법을 물어보세요"
-              />
-              <button aria-label="질문 보내기" disabled={!chat.trim()}>
-                <Send size={16} />
-              </button>
-            </form>
-          </aside>
+
       </div>
-      <footer className="preparation-footer">
-        <span>
-          {state.stage + 1}/6 · {state.selected.length}개 소스 선택
-        </span>
-        <div>
-          {state.stage > 0 && (
-            <button
-              className="button secondary"
-              onClick={() => update({ stage: state.stage - 1 }, false)}
-            >
-              이전 준비 단계
-            </button>
-          )}
-          {state.stage < 5 && (
-            <button className="button primary" disabled={busy} onClick={goNext}>
-              다음: {stages[state.stage + 1]}
-              <ArrowRight size={15} />
-            </button>
-          )}
-        </div>
-      </footer>
+
     </section>
   );
 }

@@ -2,13 +2,15 @@
 
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { Check, Minus } from "lucide-react";
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithRef } from "react";
+
+export type CheckboxProps = ComponentPropsWithRef<typeof CheckboxPrimitive.Root>;
 
 export function Checkbox({
   className = "",
   checked,
   ...props
-}: ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>) {
+}: CheckboxProps) {
   return (
     <CheckboxPrimitive.Root
       {...props}

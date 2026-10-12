@@ -1,8 +1,12 @@
 "use client";
+import { Button } from "./ui/button";
+import { useExitState } from "./use-exit-state";
 import { Select } from "./select";
+import { Toast, type ToastMessage, type ToastVariant } from "./toast";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { ResultChart } from "./result-chart";
+import { AnalysisGuide } from "./analysis-guide";
+import { ResultChart, SelectedResultCharts } from "./result-chart";
 import { ChartGallery, chartTypes } from "./chart-gallery";
 import { Checkbox } from "./checkbox";
 import Link from "next/link";
@@ -37,6 +41,8 @@ import {
   LayoutDashboard,
   ListFilter,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   MessageSquare,
   MoreHorizontal,
   Plus,
@@ -65,6 +71,7 @@ type Analysis = {
   description?: string;
   preparation?: PreparationState;
   step?: number;
+  reachedStep?: number;
   kind?: string;
   x?: string;
   y?: string;
@@ -220,11 +227,12 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
   const [analyses, setAnalyses] = useState(initialAnalyses);
   const [query, setQuery] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [modal, setModal] = useState<"workflow" | "detail" | "help" | null>(
-    editor ? "workflow" : null,
+  const [modal, setModal, modalExiting] = useExitState<"workflow" | "detail" | "help" | null>(
+    editor ? "workflow" : null, !editor,
   );
   const [active, setActive] = useState<Analysis>(initialAnalyses[0]);
   const [step, setStep] = useState(0);
+  const [reachedStep, setReachedStep] = useState(0);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [preparation, setPreparation] = useState<PreparationState>(
@@ -240,12 +248,38 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
   const [y, setY] = useState("");
   const [aggregation, setAggregation] = useState("sum");
   const [sort, setSort] = useState("recent");
-  const [notifications, setNotifications] = useState(false);
+  const [notifications, setNotifications, notificationsExiting] = useExitState(false);
+  const [profileOpen, setProfileOpen, profileExiting] = useExitState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!profileOpen) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!profileRef.current?.contains(event.target as Node)) setProfileOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setProfileOpen(false);
+        profileRef.current?.querySelector<HTMLButtonElement>(".header-profile-button")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [profileOpen]);
   const [unread, setUnread] = useState(true);
-  const [toast, setToast] = useState("");
+  const [toast, setToastMessage] = useState<ToastMessage | null>(null);
+  const setToast = (message: string, variant: ToastVariant = "success") => setToastMessage({ message, variant });
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [lnbCollapsed, setLnbCollapsed] = useState(false);
   const [filter, setFilter] = useState("전체");
-  const [error, setError] = useState("");
+  const [error, setErrorValue] = useState("");
+  const setError = (message: string) => {
+    setErrorValue(message);
+    if (message) setToast(message, "error");
+  };
   const [previewData, setPreviewData] = useState<string | null>(null);
   const [emailUpdates, setEmailUpdates] = useState(true);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -290,11 +324,6 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
     setReady(true);
   }, []);
   useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(""), 3500);
-    return () => clearTimeout(timer);
-  }, [toast]);
-  useEffect(() => {
     if (!modal || editor) return;
     restoreFocus.current = document.activeElement as HTMLElement;
     const old = document.body.style.overflow;
@@ -334,7 +363,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
     try {
       localStorage.setItem("mnm-analyses", JSON.stringify(next));
     } catch {
-      setToast("브라우저 저장 공간에 접근할 수 없어 현재 세션에만 유지됩니다.");
+      setToast("브라우저 저장 공간에 접근할 수 없어 현재 세션에만 유지됩니다.", "error");
     }
   };
   const navigate = (next: View) => {
@@ -359,6 +388,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
       text ? "샘플 데이터를 활용하여 주요 추이와 개선 기회를 탐색합니다." : "",
     );
     setStep(0);
+    setReachedStep(0);
     setError("");
     setPreparation(createPreparationState());
     setChartType(0);
@@ -371,7 +401,8 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
     setTitle(copy ? `${a.title} 복사본` : a.title);
     setDescription(a.description || "");
     setPreparation(a.preparation || createPreparationState());
-    setStep(a.step ?? 0);
+    setStep(Math.max(0, Math.min(a.step ?? 0, 4)));
+    setReachedStep(a.status === "게시됨" ? 4 : Math.max(0, Math.min(a.reachedStep ?? a.step ?? 0, 4)));
     setChartType(a.chart);
     setSelectedChartTypes(a.chartTypes?.filter(id=>chartTypes.some(t=>t.id===id)) || [a.chart === 1 ? "line" : "bar"]);
     setKind(a.kind || "비교 분석");
@@ -408,7 +439,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
       starred: analyses.find(a => a.id === editingId)?.starred ?? false,
       chart: chartType,
       chartTypes: selectedChartTypes,
-      description, preparation, step, kind, x, y, aggregation,
+      description, preparation, step, reachedStep: publish ? 4 : reachedStep, kind, x, y, aggregation,
       updatedAt: Date.now(),
       history: [...(analyses.find(a => a.id === editingId)?.history || []),
         `${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · ${publish ? "게시" : "저장"} · ${steps[step]}`],
@@ -431,9 +462,10 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
       return;
     }
     if (step === 1 && !preparation.saved) {
-      setError("데이터셋을 저장할 때까지 데이터 준비의 6단계를 완료해주세요.");
+      setToast("데이터셋을 저장할 때까지 데이터 준비의 6단계를 완료해주세요.", "error");
       return;
     }
+    setReachedStep(previous => Math.max(previous, Math.min(step + 1, 4)));
     setStep((s) => Math.min(s + 1, 4));
   };
   const download = () => {
@@ -482,7 +514,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
   }[view];
 
   return (
-    <div className={`app-shell ${editor ? "editor-shell" : ""}`} inert={!ready} aria-busy={!ready}>
+    <div className={`app-shell ${editor ? "editor-shell" : ""} ${lnbCollapsed ? "lnb-collapsed" : ""}`} inert={!ready} aria-busy={!ready}>
       <a className="skip-link" href="#main">
         본문으로 건너뛰기
       </a>
@@ -504,18 +536,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
           </span>
           <span>
             MnM<span className="brand-light"> Insight</span>
-            <small>AI ANALYTICS WORKSPACE</small>
           </span>
-        </button>
-        <button
-          className="workspace-switch"
-          onClick={() => navigate("settings")}
-        >
-          <span className="workspace-avatar">M</span>
-          <span>
-            LS MnM<small>생산 · 데이터 워크스페이스</small>
-          </span>
-          <ChevronDown size={15} />
         </button>
         <div className="nav-label">WORKSPACE</div>
         <nav aria-label="메인 메뉴">
@@ -525,10 +546,12 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
               className={`nav-item ${view === id ? "active" : ""}`}
               aria-current={view === id ? "page" : undefined}
               href={viewPaths[id]}
+              aria-label={label}
+              title={lnbCollapsed ? label : undefined}
               onClick={() => setMobileMenu(false)}
             >
               <Icon size={19} />
-              {label}
+              <span className="nav-item-label">{label}</span>
               {id === "analyses" && (
                 <span className="nav-count">{analyses.length}</span>
               )}
@@ -537,43 +560,29 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
         </nav>
         <div className="sidebar-divider" />
         <div className="nav-label">SUPPORT</div>
-        <button className="nav-item" onClick={() => setModal("help")}>
+        <button className="nav-item" aria-label="이용 가이드" title={lnbCollapsed ? "이용 가이드" : undefined} onClick={() => setModal("help")}>
           <BookOpen size={19} />
-          이용 가이드
+          <span className="nav-item-label">이용 가이드</span>
           <ArrowUpRight className="nav-end" size={14} />
         </button>
         <Link
           className={`nav-item ${view === "settings" ? "active" : ""}`}
           href="/settings"
+          aria-label="설정"
+          title={lnbCollapsed ? "설정" : undefined}
           aria-current={view === "settings" ? "page" : undefined}
         >
           <Settings size={19} />
-          설정
+          <span className="nav-item-label">설정</span>
         </Link>
-        <div className="sidebar-bottom">
-          <div className="help-card">
-            <span className="help-icon">
-              <Sparkles size={18} />
-            </span>
-            <strong>데이터 분석, 처음인가요?</strong>
-            <p>AI와 함께 첫 인사이트를 발견하세요.</p>
-            <button onClick={() => begin()}>
-              분석 시작하기 <ArrowRight size={14} />
-            </button>
-          </div>
-          <button className="profile" onClick={() => navigate("settings")}>
-            <span className="avatar">홍</span>
-            <span>
-              <strong>홍길동</strong>
-              <small>생산관리팀</small>
-            </span>
-            <MoreHorizontal size={20} />
-          </button>
-        </div>
         <div className="sidebar-foot">
           LS MnM <span>© 2026</span>
         </div>
       </aside>
+
+      <button className="lnb-toggle" aria-label={lnbCollapsed ? "사이드바 펼치기" : "사이드바 접기"} aria-expanded={!lnbCollapsed} aria-controls="workspace-navigation" onClick={() => setLnbCollapsed(previous => !previous)}>
+        {lnbCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+      </button>
 
       <div className="main-shell">
         <header className="topbar">
@@ -592,10 +601,11 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
             <strong>{editor ? (sessionId && !copy ? "분석 편집" : "새 분석 만들기") : view === "home" ? "홈" : pageTitle}</strong>
           </div>
           <div className="top-actions">
-            <span className="demo-label">
-              <span />
-              샘플 데이터 환경
-            </span>
+            <div className="header-workspace-select">
+              <Select aria-label="데이터 워크스페이스" defaultValue="ls-mnm">
+                <option value="ls-mnm">LS MnM · 생산 데이터 워크스페이스</option>
+              </Select>
+            </div>
             <button
               className="icon-button notification-button"
               aria-label="알림"
@@ -613,16 +623,25 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
               <CircleHelp size={19} />
             </button>
             <span className="top-divider" />
-            <button
-              className="avatar avatar-small"
-              aria-label="사용자 설정"
-              onClick={() => navigate("settings")}
-            >
-              홍
-            </button>
+            <div className="header-profile" ref={profileRef}>
+              <button className="header-profile-button" aria-label="사용자 정보" aria-expanded={profileOpen} aria-controls="header-profile-popover" onClick={() => setProfileOpen(!profileOpen)}>
+                <span className="avatar avatar-small">홍</span>
+                <span className="header-profile-name">홍길동</span>
+                <ChevronDown size={14} />
+              </button>
+              {profileOpen && (
+                <section id="header-profile-popover" className={`header-profile-popover ${profileExiting ? "popup-exiting" : ""}`} aria-label="사용자 정보">
+                  <div className="header-profile-summary">
+                    <span className="avatar">홍</span>
+                    <div><strong>홍길동</strong><small>생산관리팀</small></div>
+                  </div>
+                  <Button variant="secondary" onClick={() => { setProfileOpen(false); navigate("settings"); }}><Settings size={16} />사용자 설정</Button>
+                </section>
+              )}
+            </div>
           </div>
           {notifications && (
-            <section className="notification-popover" aria-label="알림 목록">
+            <section className={`notification-popover ${notificationsExiting ? "popup-exiting" : ""}`} aria-label="알림 목록">
               <div className="popover-title">
                 <strong>알림</strong>
                 <button
@@ -686,9 +705,9 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                   </h1>
                   <p>오늘의 데이터에서 새로운 가능성을 발견해보세요.</p>
                 </div>
-                <button className="button primary" onClick={() => begin()}>
+                <Button variant="primary" onClick={() => begin()}>
                   <Plus size={18} />새 분석 만들기
-                </button>
+                </Button>
               </section>
 
               <section className="ai-hero" aria-labelledby="hero-title">
@@ -957,13 +976,13 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                     함께해보세요.
                   </p>
                 </div>
-                <button
-                  className="button secondary"
+                <Button
+                  variant="secondary"
                   onClick={() => setModal("help")}
                 >
                   가이드 살펴보기
                   <ArrowUpRight size={15} />
-                </button>
+                </Button>
               </div>
             </>
           ) : (
@@ -985,9 +1004,9 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                   </p>
                 </div>
                 {view !== "settings" && (
-                  <button className="button primary" onClick={() => begin()}>
+                  <Button variant="primary" onClick={() => begin()}>
                     <Plus size={18} />새 분석 만들기
-                  </button>
+                  </Button>
                 )}
               </section>
               {view === "settings" ? (
@@ -1030,7 +1049,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                           );
                           setToast("알림 설정을 저장했습니다.");
                         } catch {
-                          setToast("설정을 저장할 수 없습니다.");
+                          setToast("설정을 저장할 수 없습니다.", "error");
                         }
                       }}
                     />
@@ -1120,7 +1139,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                       <Search size={32} aria-hidden="true" />
                       <h2>검색 결과가 없어요</h2>
                       <p>데이터 이름이나 설명의 다른 단어로 검색해보세요.</p>
-                      <button className="button secondary" onClick={() => setQuery("")}>검색 초기화</button>
+                      <Button variant="secondary" onClick={() => setQuery("")}>검색 초기화</Button>
                     </div>
                   )}
                   {previewData &&
@@ -1247,15 +1266,15 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                           ? "분석 카드의 별을 누르면 여기에 표시됩니다."
                           : "검색 조건을 바꾸거나 새로운 분석을 시작해보세요."}
                       </p>
-                      <button
-                        className="button secondary"
+                      <Button
+                        variant="secondary"
                         onClick={() => {
                           setQuery("");
                           setFilter("전체");
                         }}
                       >
                         필터 초기화
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </>
@@ -1273,18 +1292,12 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
       </div>
 
       {toast && (
-        <div className="toast" role="status">
-          <Check size={17} />
-          {toast}
-          <button aria-label="메시지 닫기" onClick={() => setToast("")}>
-            <X size={15} />
-          </button>
-        </div>
+        <Toast notification={toast} onClose={() => setToastMessage(null)} />
       )}
 
       {modal && (
         <div
-          className={editor ? "analysis-page" : "modal-overlay"}
+          className={editor ? "analysis-page" : `modal-overlay ${modalExiting ? "modal-exiting" : ""}`}
           role={editor ? "main" : undefined}
           id={editor ? "main" : undefined}
           onClick={(e) => {
@@ -1299,7 +1312,9 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
             aria-modal={editor ? undefined : true}
             aria-labelledby="modal-title"
           >
-            <header className="modal-header">
+            {editor && modal === "workflow" ? (
+              <h2 id="modal-title" className="sr-only">분석 작업</h2>
+            ) : <header className="modal-header">
               <div>
                 <span className="eyebrow">
                   {modal === "workflow"
@@ -1323,7 +1338,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
               >
                 {editor ? <span>목록으로</span> : <X size={23} />}
               </button>
-            </header>
+            </header>}
             {modal === "help" ? (
               <div className="help-content">
                 <p>
@@ -1355,10 +1370,10 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                     AI 응답은 예시이며, 준비 데이터는 실제 집계합니다. 분석 설정과 작업 단계를 이 브라우저에 저장하고 복원합니다.
                   </span>
                 </div>
-                <button className="button primary" onClick={() => begin()}>
+                <Button variant="primary" onClick={() => begin()}>
                   첫 분석 시작하기
                   <ArrowRight size={17} />
-                </button>
+                </Button>
               </div>
             ) : modal === "detail" ? (
               <div className="detail-content">
@@ -1377,7 +1392,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                     준비 데이터 집계 결과
                   </span>
                 </div>
-                {active.preparation ? <ResultChart preparation={active.preparation} x={active.x} y={active.y} aggregation={active.aggregation} variant={active.chart} /> : <MiniChart variant={active.chart} large />}
+                {active.preparation ? <SelectedResultCharts preparation={active.preparation} x={active.x} y={active.y} aggregation={active.aggregation} variant={active.chart} chartIds={active.chartTypes} /> : <MiniChart variant={active.chart} large />}
                 <div className="notice">
                   <Sparkles size={20} />
                   <span>
@@ -1390,9 +1405,9 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                 <p>진행 단계: {steps[active.step ?? 0]} · {active.kind || "샘플 분석"}</p>
                 <ul>{active.history?.map((h,i)=><li key={i}>{h}</li>)}</ul>
                 <div className="detail-actions">
-                  <button className="button secondary" onClick={() => resume(active, true)}>복제</button>
-                  <button
-                    className="button secondary"
+                  <Button variant="secondary" onClick={() => resume(active, true)}>복제</Button>
+                  <Button
+                    variant="secondary"
                     onClick={() => {
                       star(active.id);
                       setActive({ ...active, starred: !active.starred });
@@ -1403,18 +1418,18 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                       fill={active.starred ? "currentColor" : "none"}
                     />
                     {active.starred ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-                  </button>
-                  <button className="button secondary" onClick={() => active.preparation ? downloadDataset({ name: active.title, ...evaluatePreparation(active.preparation) }) : download()}>
+                  </Button>
+                  <Button variant="secondary" onClick={() => active.preparation ? downloadDataset({ name: active.title, ...evaluatePreparation(active.preparation) }) : download()}>
                     <Download size={16} />
                     샘플 CSV
-                  </button>
-                  <button
-                    className="button primary"
+                  </Button>
+                  <Button
+                    variant="primary"
                     onClick={() => resume(active)}
                   >
                     이어서 분석하기
                     <ArrowRight size={16} />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -1423,17 +1438,20 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                   {steps.map((s, i) => (
                     <li
                       className={
-                        i === step ? "current" : i < step ? "completed" : ""
+                        i === step ? "current" : i <= reachedStep ? "completed" : ""
                       }
                       key={s}
                       aria-current={i === step ? "step" : undefined}
                     >
-                      <span>{i < step ? <Check size={14} /> : i + 1}</span>
-                      {s}
+                      <button type="button" disabled={i > reachedStep} onClick={() => { setStep(i); setError(""); }} aria-current={i === step ? "step" : undefined}>
+                        <span>{i < reachedStep ? <Check size={14} /> : i + 1}</span>
+                        {s}
+                      </button>
                     </li>
                   ))}
                 </ol>
-                <div className="workflow-body">
+                <AnalysisGuide step={step} state={preparation} onChange={setPreparation} onNotify={message => setToast(message, "error")} />
+                <div className="workflow-body" key={step}>
                   {step === 0 && (
                     <div className="setup-step">
                       <div className="step-title">
@@ -1451,7 +1469,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                         <input
                           ref={titleRef}
                           aria-invalid={!!error && !title.trim()}
-                          aria-describedby={error && !title.trim() ? "analysis-error" : undefined}
+                          
                           placeholder="예: 9월 제품별 생산 실적 분석"
                           value={title}
                           onChange={(e) => setTitle(e.target.value)}
@@ -1476,8 +1494,8 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                       </div>
                       <div className="setup-prompts">
                         {prompts.map((p) => (
-                          <button
-                            className="button secondary"
+                          <Button
+                            variant="secondary"
                             key={p}
                             onClick={() => {
                               setTitle(p);
@@ -1488,7 +1506,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                           >
                             {p}
                             <ArrowUpRight size={13} />
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
@@ -1496,6 +1514,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                   {step === 1 && (
                     <DataPreparation
                       state={preparation}
+                      onNotify={(message, variant = "error") => setToast(message, variant)}
                       onChange={(next) => {
                         setPreparation(next);
                         setError("");
@@ -1530,7 +1549,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                           <h3>{title}</h3>
                           <span className="tag blue">준비 데이터</span>
                         </div>
-                        <ResultChart preparation={preparation} x={x} y={y} aggregation={aggregation} variant={chartType} />
+                        <SelectedResultCharts preparation={preparation} x={x} y={y} aggregation={aggregation} variant={chartType} chartIds={selectedChartTypes} />
                         
                       </div>
                     </>
@@ -1550,7 +1569,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                           인사이트 예시
                         </span>
                       </div>
-                      <ResultChart preparation={preparation} x={x} y={y} aggregation={aggregation} variant={chartType} />
+                      <SelectedResultCharts preparation={preparation} x={x} y={y} aggregation={aggregation} variant={chartType} chartIds={selectedChartTypes} />
                       <div className="insight-cards">
                         <div>
                           <span className="stat-icon green">
@@ -1613,19 +1632,9 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                           <strong>현재 브라우저 (로컬 데모)</strong>
                         </div>
                       </div>
-                      <div className="notice">
-                        <ShieldCheck size={20} />
-                        <span>
-                          분석 목적·유형·데이터 준비·차트 설정·작업 단계를 이 브라우저에 저장하고 복원합니다. 다른 사용자와의 공유는 연결되지 않았습니다.
-                        </span>
-                      </div>
                     </div>
                   )}
-                  {error && (
-                    <div id="analysis-error" className="form-error" role="alert">
-                      {error}
-                    </div>
-                  )}
+
                 </div>
                 <footer className="workflow-footer">
                   <span>
@@ -1634,24 +1643,25 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                   </span>
                   <div>
                     {step > 0 && (
-                      <button
-                        className="button secondary"
+                      <Button
+                        variant="secondary"
                         onClick={() => {
                           setStep(step - 1);
                           setError("");
                         }}
                       >
                         이전
-                      </button>
+                      </Button>
                     )}
-                    <button
-                      className="button secondary"
+                    <Button
+                      variant="secondary"
                       onClick={() => saveAnalysis(false)}
                     >
                       임시저장
-                    </button>
-                    <button
-                      className="button primary"
+                    </Button>
+                    <Button
+                      variant="primary"
+                      disabled={step === 1 && !preparation.saved}
                       onClick={() =>
                         step === 4 ? saveAnalysis(true) : nextStep()
                       }
@@ -1660,7 +1670,7 @@ export default function Workspace({ view, editor = false, sessionId, copy = fals
                         ? "분석 게시하기"
                         : `다음: ${steps[step + 1]}`}
                       <ArrowRight size={16} />
-                    </button>
+                    </Button>
                   </div>
                 </footer>
               </>
@@ -1709,7 +1719,7 @@ function AnalysisCard({
         </p>
         <p className="analysis-card-context">{a.step !== undefined ? `${a.kind || "분석"} · ${steps[a.step]}` : "샘플 분석"}</p>
         <div className="analysis-card-chart">
-          {a.preparation?.saved ? <ResultChart compact preparation={a.preparation} x={a.x} y={a.y} aggregation={a.aggregation} variant={a.chart} /> : <MiniChart variant={a.chart} />}
+          {a.preparation?.saved ? <ResultChart compact chartId={a.chartTypes?.[0]} preparation={a.preparation} x={a.x} y={a.y} aggregation={a.aggregation} variant={a.chart} /> : <MiniChart variant={a.chart} />}
         </div>
       </button>
       <div className="analysis-card-footer">

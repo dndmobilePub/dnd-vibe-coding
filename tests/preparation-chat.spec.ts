@@ -3,6 +3,10 @@ import { expect, test } from "@playwright/test";
 test("guide stays visible during scrolling and manual setup, with chat avatars", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/analyses/new");
+  const initialGuide = page.getByRole("complementary", { name: "AI 준비 가이드" });
+  await expect(initialGuide).toBeVisible();
+  await page.getByRole("textbox", { name: "데이터 가이드 질문" }).fill("분석 목적을 정하고 싶어요");
+  await page.getByRole("button", { name: "질문 보내기" }).click();
   await page.getByRole("textbox", { name: /분석 이름/ }).fill("가이드 확인");
   await page.getByRole("button", { name: "다음: 데이터 준비", exact: true }).click();
   const guide = page.getByRole("complementary", { name: "AI 준비 가이드" });
@@ -12,9 +16,9 @@ test("guide stays visible during scrolling and manual setup, with chat avatars",
   expect((await guide.boundingBox())!.y).toBe(top);
   await page.getByRole("textbox", { name: "데이터 가이드 질문" }).fill("연결 방법을 알려주세요");
   await page.getByRole("button", { name: "질문 보내기" }).click();
-  await expect(guide.locator(".user-avatar")).toHaveText("홍");
-  await expect(guide.locator(".robot-avatar")).toHaveCount(2);
+  await expect(guide.locator(".user-avatar")).toHaveCount(2);
+  await expect(guide.locator(".robot-avatar")).toHaveCount(3);
   await page.getByRole("button", { name: "직접 설정", exact: true }).click();
   await expect(guide).toBeVisible();
-  await expect(guide.locator(".chat-user")).toHaveText("연결 방법을 알려주세요");
+  await expect(guide.locator(".chat-user")).toHaveText(["분석 목적을 정하고 싶어요", "연결 방법을 알려주세요"]);
 });

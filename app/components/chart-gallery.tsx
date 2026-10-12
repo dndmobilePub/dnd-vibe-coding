@@ -1,4 +1,5 @@
-﻿"use client";
+"use client";
+import { Button } from "./ui/button";
 
 import { useState } from "react";
 import { ChartColumn, ChartBar, ChartSpline, ChartPie, Grid3X3, ScatterChart, ChartArea, Activity } from "lucide-react";
@@ -56,10 +57,10 @@ export function ChartGallery({ kind, selected, onChange }: {kind: string; select
   const recommended = recommendations[kind] || [];
   return <section className="chart-gallery" aria-label="차트 유형 선택">
     <header className="chart-gallery-toolbar"><div><h3>차트 유형 선택</h3><span role="status">{selected.length}개 선택됨</span></div><div className="chart-gallery-actions">
-      <button className="button secondary" onClick={()=>onChange(chartTypes.map(t=>t.id))}>전체 선택</button>
-      <button className="button secondary" onClick={()=>onChange([])}>선택 해제</button>
+      <Button variant="secondary" onClick={()=>onChange(chartTypes.map(t=>t.id))}>전체 선택</Button>
+      <Button variant="secondary" onClick={()=>onChange([])}>선택 해제</Button>
       <div className="segmented" aria-label="차트 배치">{[1,2,3].map(n=><button key={n} aria-pressed={columns===n} className={columns===n?"selected":""} onClick={()=>setColumns(n)}>{n}열</button>)}</div>
-      <button className="button secondary" onClick={()=>onChange(recommended)}>권장만 선택</button>
+      <Button variant="secondary" onClick={()=>onChange(recommended)}>권장만 선택</Button>
     </div></header>
     <div className="chart-type-options">{chartTypes.map(({id,name,icon:Icon})=><label key={id} className={`chart-type-option ${selected.includes(id)?"selected":""}`}>
       <Checkbox aria-label={`${name} 선택`} checked={selected.includes(id)} onCheckedChange={checked=>onChange(checked?[...selected,id]:selected.filter(s=>s!==id))}/><Icon size={18} aria-hidden="true"/><span>{name}</span>{recommended.includes(id)&&<span className="recommended-badge">권장</span>}

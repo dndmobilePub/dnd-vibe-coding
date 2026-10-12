@@ -2,12 +2,33 @@
 
 import { createPreparationState } from "../lib/data-preparation";
 
+test("completed analysis supports direct navigation and retains reached steps after saving", async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("mnm-analyses")) localStorage.setItem("mnm-analyses", JSON.stringify([
+      { id: 200, title: "완료 분석 수정", category: "생산 관리", date: "2026.10.06", status: "게시됨", starred: false, chart: 0, step: 4 },
+    ]));
+  });
+  await page.goto("/analyses/new?session=200");
+  const navigation = page.locator(".workflow-steps button");
+  const guide = page.getByRole("complementary", { name: "AI 준비 가이드" });
+  for (const index of [0, 2, 3, 4, 1, 0]) {
+    await navigation.nth(index).click();
+    await expect(navigation.nth(index)).toHaveAttribute("aria-current", "step");
+    await expect(guide).toBeVisible();
+  }
+  await page.locator(".analysis-editor").getByRole("button", { name: "임시저장", exact: true }).click();
+  await page.goto("/analyses/new?session=200");
+  await navigation.nth(4).click();
+  await expect(navigation.nth(4)).toHaveAttribute("aria-current", "step");
+});
+
 test("draft restores setup and updates the original session", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "새 분석 만들기" }).click();
   await page.getByRole("textbox", { name: /분석 이름/ }).fill("복원 검증");
   await page.getByRole("textbox", { name: "분석 목적" }).fill("원래 목적");
   await page.locator(".analysis-editor").getByRole("button", { name: "임시저장", exact: true }).click();
+  await expect(page).toHaveURL(/\/analyses$/);
   await page.reload();
   await page.getByRole("button").filter({ has: page.getByRole("heading", { name: "복원 검증" }) }).click();
   await page.getByRole("button", { name: "이어서 분석하기" }).click();
